@@ -1,0 +1,16 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+  {{ .Description }}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description }}
+
+## Example Usage
+
+{{ tffile "examples/resources/job/resource.tf" }}
+
+{{ .SchemaMarkdown | trimspace }}

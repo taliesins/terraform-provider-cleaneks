@@ -1,0 +1,51 @@
+.terraform.lock.hcl
+.terraform.tfstate.lock.info
+bootstrap.zip
+__tools/
+*.dll
+*.exe
+.DS_Store
+example.tf
+terraform.tfplan
+terraform.tfstate
+bin/
+dist/
+modules-dev/
+/pkg/
+website/.vagrant
+website/.bundle
+website/build
+website/node_modules
+.vagrant/
+*.backup
+./*.tfstate
+.terraform/
+*.log
+*.bak
+*~
+.*.swp
+.idea
+*.iml
+*.test
+*.iml
+
+website/vendor
+
+# Test exclusions
+!command/test-fixtures/**/*.tfstate
+!command/test-fixtures/**/.terraform/
+
+# Keep windows files with windows line endings
+*.winfile eol=crlf
+/vendor
+/act
+/node_modules
+/package-lock.json
+/package.json
+/.vs
+/.idea
+/.terraform
+
+# Ignore output binary
+terraform-provider-cleaneks
+terraform-provider-cleaneks.exe

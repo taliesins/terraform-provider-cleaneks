@@ -1,0 +1,70 @@
+issues:
+  exclude-rules:
+    - linters:
+        - gosimple
+      text: "S1039:"
+
+    # Exclude issues bypassing staticcheck.conf
+    - linters:
+        - staticcheck
+      text: "SA1019:"
+
+    - linters:
+        - unparam
+      text: "always receives"
+
+  max-per-linter: 0
+  max-same-issues: 0
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - depguard
+    #- dogsled
+    #- dupl
+    - errcheck
+    - exportloopref
+    #- funlen
+    #- gochecknoinits #needed for document generation
+    - goconst
+    - gocritic
+    #- gocyclo
+    - gofmt
+    - goimports
+    #- gomnd
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    #- lll
+    - misspell
+    - nakedret
+    - noctx
+    - nolintlint
+    - staticcheck
+    #- stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+
+linters-settings:
+  errcheck:
+    ignore: github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema:ForceNew|Set,fmt:.*,io:Close
+  depguard:
+    rules:
+      logger:
+        deny:
+          # logging is allowed only by logutils.Log,
+          # logrus is allowed to use only in logutils package.
+          - pkg: "github.com/sirupsen/logrus"
+            desc: logging is allowed only by logutils.Log
+
+run:
+  modules-download-mode: mod
+  timeout: 10m
+
+skip-dirs-use-default: true

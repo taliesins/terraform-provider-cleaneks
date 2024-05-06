@@ -1,0 +1,33 @@
+---
+page_title: "Provider: {{ .ProviderName }}"
+description: |-
+  {{ .Description }}
+
+---
+
+# CleanEKS Provider
+
+The CleanEKS Provider can be used to configure a clean EKS cluster.
+
+When an EKS cluster is created by default AWS CNI, Kube Proxy and CoreDNS are configured for the cluster. This is
+done to make the process of using EKS simplier. When using IaC tools this causes problems, as our desired state is
+to remove created resources. This provider aims to solve that problem.
+
+In more advanced scenario's you might want to replace AWS CNI that is used with something like Cilium CNI. To get
+the full power of Cilium we would want to replace instead of chain Cilium on top of AWS CNI and using Kube Proxy.
+
+The other scenario where this provider is useful is if you want to manage these components yourself with something
+like Helm. A pattern that is often followed is called App of Apps, where there is an umbrella Helm chart that calls
+all the other helm charts required. Mixing this with a Kubernetes native deployment system like ArgoCD allows a
+very easy way to administer a Kubernetes cluster using GitOps.
+
+For example using ArgoCD application CRD to define the core App of Apps for a cluster. So to update CoreDNS you
+would update the Helm Chart version in Git and ArgoCD would detect the change and roll out the new version of
+CoreDNS. It could also be used to override Helm Chart values for example to configure automatic scaling of CoreDNS
+which is **not enabled** by default by AWS.
+
+## Example Usage
+
+{{ tffile "examples/provider/provider.tf" }}
+
+{{ .SchemaMarkdown | trimspace }}
