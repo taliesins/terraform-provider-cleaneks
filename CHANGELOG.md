@@ -1,6 +1,6 @@
 
-<a name="v0.0.0-prerelease.0"></a>
-## v0.0.0-prerelease.0 (2024-05-06)
+<a name="v0.0.0"></a>
+## v0.0.0 (2024-05-06)
 
 ### Chore
 - **deps:** [c4a2879](https://github.com/taliesins/terraform-provider-cleaneks/commit/c4a2879896bd7727a46921d45d362f6266e08257) bump golang.org/x/net from 0.23.0 to 0.25.0
