@@ -2,6 +2,10 @@ package provider
 
 import (
 	"context"
+	"net/http"
+	"net/url"
+	"time"
+
 	"golang.org/x/net/http/httpproxy"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -10,9 +14,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
-	"net/http"
-	"net/url"
-	"time"
 )
 
 const helmReleaseNameAnnotationName string = "meta.helm.sh/release-name"
@@ -31,9 +32,7 @@ func GetClient(endpoint string, timeout int64, insecure bool, caCertificate stri
 		return httpproxy.FromEnvironment().ProxyFunc()(req.URL)
 	}
 
-	var config *rest.Config
-
-	config = &rest.Config{
+	config := &rest.Config{
 		Host: endpoint,
 		TLSClientConfig: rest.TLSClientConfig{
 			Insecure: insecure,
@@ -85,11 +84,12 @@ func DaemonsetExist(ctx context.Context, clientset *kubernetes.Clientset, namesp
 
 func DeleteDaemonset(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
 	err = clientset.AppsV1().DaemonSets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-	if err != nil && !errors.IsNotFound(err) {
+	switch {
+	case err != nil && !errors.IsNotFound(err):
 		return false, err
-	} else if errors.IsNotFound(err) {
+	case errors.IsNotFound(err):
 		return false, nil
-	} else {
+	default:
 		return true, nil
 	}
 }
@@ -113,11 +113,12 @@ func DeploymentExist(ctx context.Context, clientset *kubernetes.Clientset, names
 
 func DeleteDeployment(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
 	err = clientset.AppsV1().Deployments(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-	if err != nil && !errors.IsNotFound(err) {
+	switch {
+	case err != nil && !errors.IsNotFound(err):
 		return false, err
-	} else if errors.IsNotFound(err) {
+	case errors.IsNotFound(err):
 		return false, nil
-	} else {
+	default:
 		return true, nil
 	}
 }
@@ -141,11 +142,12 @@ func ServiceExist(ctx context.Context, clientset *kubernetes.Clientset, namespac
 
 func DeleteService(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
 	err = clientset.CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-	if err != nil && !errors.IsNotFound(err) {
+	switch {
+	case err != nil && !errors.IsNotFound(err):
 		return false, err
-	} else if errors.IsNotFound(err) {
+	case errors.IsNotFound(err):
 		return false, nil
-	} else {
+	default:
 		return true, nil
 	}
 }
@@ -224,7 +226,6 @@ func ServiceImportedIntoHelm(ctx context.Context, clientset *kubernetes.Clientse
 	}
 
 	return helmReleaseNameAnnotationSet, helmReleaseNamespaceAnnotationSet, managedByLabelSet, amazonManagedLabelRemoved, nil
-
 }
 
 func ImportDeploymentIntoHelm(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (err error) {
