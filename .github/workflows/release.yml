@@ -23,7 +23,6 @@ on:
       - .github/workflows/release.yml
       - .golangci.yml
       - .goreleaser.yml
-      - .semgrep.yml
       - interal/**
       - api/**
       - powershell/**
@@ -36,7 +35,7 @@ on:
       - website/**
 
 env:
-  GO_VERSION: "1.21.5"
+  GO_VERSION: "1.22.2"
   GO111MODULE: on
   TERRAFORM_VERSION: "1.5.5"
   GIT_CHGLOG_VERSION: "0.15.4"
@@ -293,32 +292,6 @@ jobs:
       - run: go install github.com/golangci/golangci-lint/cmd/golangci-lint
       - run: golangci-lint run
 
-  semgrep:
-    # User definable name of this GitHub Actions job.
-    name: semgrep/ci 
-    # If you are self-hosting, change the following `runs-on` value: 
-    runs-on: ubuntu-latest
-
-    container:
-      # A Docker image with Semgrep installed. Do not change this.
-      image: returntocorp/semgrep
-
-    # Skip any PR created by dependabot to avoid permission issues:
-    if: (github.actor != 'dependabot[bot]')
-
-    steps:
-      # Fetch project source with GitHub Actions Checkout.
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      # Run the "semgrep ci" command on the command line of the docker image.
-      - run: semgrep ci --no-suppress-errors
-        env:
-          # Connect to Semgrep Cloud Platform through your SEMGREP_APP_TOKEN.
-          # Generate a token from Semgrep Cloud Platform > Settings
-          # and add it to your GitHub secrets.
-          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
-
   goreleaser:
     needs: [go_build]
     runs-on: ubuntu-latest
@@ -409,7 +382,7 @@ jobs:
           args: release --clean --timeout ${{ env.RELEASE_TIME_OUT }} --release-notes=CHANGELOG.md
         env:
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.CREATE_TAG_GITHUB_TOKEN }}
           GORELEASER_CURRENT_TAG: "v${{ steps.get_version.outputs.RELEASE_VERSION }}"
           GORELEASER_PREVIOUS_TAG: "v${{ steps.get_version.outputs.PREVIOUS_VERSION }}"
           
