@@ -23,7 +23,7 @@ func (p *cleanEksProvider) Metadata(_ context.Context, _ provider.MetadataReques
 
 func (p *cleanEksProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "A provider to bootstrap an EKS cluster by remove AWS CNI, Kube-Proxy, import CoreDNS into Helm and drop managed by AWS from CoreDNS",
+		Description: "A provider to bootstrap an EKS cluster by removing AWS CNI and Kube-Proxy. It will also add the required annotations and labels to CoreDNS so that Helm can manage CoreDNS. It will also drop managed by AWS labels from CoreDNS deployment and service.",
 		Attributes:  map[string]schema.Attribute{},
 	}
 }
