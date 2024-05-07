@@ -27,7 +27,16 @@ const managedByLabelValue string = "Helm"
 
 const amazonManagedLabelName string = "eks.amazonaws.com/component"
 
-func GetClient(endpoint string, timeout int64, insecure bool, caCertificate string, token string, clientCertificate string, clientKey string) (clientset *kubernetes.Clientset, err error) {
+func (p *cleanEksProvider) GetClient() (clientset *kubernetes.Clientset, err error) {
+
+	endpoint := p.Endpoint
+	timeout := p.RequestTimeout
+	insecure := p.Insecure
+	caCertificate := p.CaCertificate
+	token := p.Token
+	clientCertificate := p.ClientCertificate
+	clientKey := p.ClientKey
+
 	proxy := func(req *http.Request) (*url.URL, error) {
 		return httpproxy.FromEnvironment().ProxyFunc()(req.URL)
 	}
@@ -66,20 +75,15 @@ func GetClient(endpoint string, timeout int64, insecure bool, caCertificate stri
 }
 
 func DaemonsetExist(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
-	daemonsets, err := clientset.AppsV1().DaemonSets(namespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
+	_, err = clientset.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
+	switch {
+	case err != nil && !errors.IsNotFound(err):
 		return false, err
+	case errors.IsNotFound(err):
+		return false, nil
+	default:
+		return true, nil
 	}
-
-	found := false
-	for _, daemonset := range daemonsets.Items {
-		if daemonset.Name == name {
-			found = true
-			break
-		}
-	}
-
-	return found, nil
 }
 
 func DeleteDaemonset(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
@@ -95,20 +99,15 @@ func DeleteDaemonset(ctx context.Context, clientset *kubernetes.Clientset, names
 }
 
 func DeploymentExist(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
-	deployments, err := clientset.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
+	_, err = clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+	switch {
+	case err != nil && !errors.IsNotFound(err):
 		return false, err
+	case errors.IsNotFound(err):
+		return false, nil
+	default:
+		return true, nil
 	}
-
-	found := false
-	for _, deployment := range deployments.Items {
-		if deployment.Name == name {
-			found = true
-			break
-		}
-	}
-
-	return found, nil
 }
 
 func DeleteDeployment(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
@@ -124,20 +123,15 @@ func DeleteDeployment(ctx context.Context, clientset *kubernetes.Clientset, name
 }
 
 func ServiceExist(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
-	services, err := clientset.CoreV1().Services(namespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
+	_, err = clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
+	switch {
+	case err != nil && !errors.IsNotFound(err):
 		return false, err
+	case errors.IsNotFound(err):
+		return false, nil
+	default:
+		return true, nil
 	}
-
-	found := false
-	for _, service := range services.Items {
-		if service.Name == name {
-			found = true
-			break
-		}
-	}
-
-	return found, nil
 }
 
 func DeleteService(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
