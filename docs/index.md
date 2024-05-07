@@ -30,9 +30,9 @@ which is **not enabled** by default by AWS.
 
 ```terraform
 provider "cleaneks" {
-  endpoint    = data.aws_eks_cluster.cluster.endpoint
-  ca_cert_pem = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
-  token       = data.aws_eks_cluster_auth.cluster.token
+  host                   = data.aws_eks_cluster.cluster.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
+  token                  = data.aws_eks_cluster_auth.cluster.token
 }
 
 module "eks" {

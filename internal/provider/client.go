@@ -27,8 +27,8 @@ const managedByLabelValue string = "Helm"
 
 const amazonManagedLabelName string = "eks.amazonaws.com/component"
 
-func (p *cleanEksProvider) GetClient() (clientset *kubernetes.Clientset, err error) {
-	endpoint := p.Endpoint
+func (p *CleanEksProvider) GetClient() (clientset *kubernetes.Clientset, err error) {
+	endpoint := p.Host
 	timeout := p.RequestTimeout
 	insecure := p.Insecure
 	caCertificate := p.CaCertificate
