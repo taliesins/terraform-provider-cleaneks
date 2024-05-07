@@ -4,26 +4,56 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"k8s.io/client-go/kubernetes"
 )
 
-type jobResource struct{}
-
-var _ resource.Resource = (*jobResource)(nil)
+// Ensure provider defined types fully satisfy framework interfaces.
+var _ resource.Resource = &JobResource{}
+var _ resource.ResourceWithImportState = &JobResource{}
 
 func NewJobResource() resource.Resource {
-	return &jobResource{}
+	return &JobResource{}
 }
 
-func (r *jobResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+type JobResource struct {
+	host      string
+	clientset *kubernetes.Clientset
+}
+
+type JobResourceModel struct {
+	ID types.String `tfsdk:"id"`
+
+	RemoveAwsCni             types.Bool `tfsdk:"remove_aws_cni"`
+	RemoveKubeProxy          types.Bool `tfsdk:"remove_kube_proxy"`
+	ImportCorednsToHelm      types.Bool `tfsdk:"import_coredns_to_helm"`
+	AwsCniDaemonsetExists    types.Bool `tfsdk:"aws_cni_daemonset_exists"`
+	KubeProxyDaemonsetExists types.Bool `tfsdk:"kube_proxy_daemonset_exists"`
+
+	CorednsDeploymentLabelHelmReleaseNameSet      types.Bool `tfsdk:"coredns_deployment_label_helm_release_name_set"`
+	CorednsDeploymentLabelHelmReleaseNamespaceSet types.Bool `tfsdk:"coredns_deployment_label_helm_release_namespace_set"`
+	CorednsDeploymentLabelManagedBySet            types.Bool `tfsdk:"coredns_deployment_label_managed_by_set"`
+	CorednsDeploymentLabelAmazonManagedRemoved    types.Bool `tfsdk:"coredns_deployment_label_amazon_managed_removed"`
+
+	CorednsServiceLabelHelmReleaseNameSet      types.Bool `tfsdk:"coredns_service_label_helm_release_name_set"`
+	CorednsServiceLabelHelmReleaseNamespaceSet types.Bool `tfsdk:"coredns_service_label_helm_release_namespace_set"`
+	CorednsServiceLabelManagedBySet            types.Bool `tfsdk:"coredns_service_label_managed_by_set"`
+	CorednsServiceLabelAmazonManagedRemoved    types.Bool `tfsdk:"coredns_service_label_amazon_managed_removed"`
+}
+
+func (r *JobResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_job"
 }
 
-func (r *jobResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *JobResource) Schema(_ context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Cleans an EKS cluster of default AWS-CNI, Kube-Proxy and imports CoreDNS deployment " +
 			"and service into Helm. By importing CoreDNS into Helm, we don't loose DNS at any point and we " +
@@ -32,6 +62,9 @@ func (r *jobResource) Schema(_ context.Context, req resource.SchemaRequest, resp
 			"id": schema.StringAttribute{
 				Description: `ID of the job. This is the same values as the endpoint.`,
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 
 			"remove_aws_cni": schema.BoolAttribute{
@@ -108,11 +141,32 @@ func (r *jobResource) Schema(_ context.Context, req resource.SchemaRequest, resp
 	}
 }
 
-func (r *jobResource) Create(ctx context.Context, req resource.CreateRequest, res *resource.CreateResponse) {
+func (r *JobResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	// Prevent panic if the provider has not been configured.
+	if req.ProviderData == nil {
+		return
+	}
+
+	cleanEksProviderResourceData, ok := req.ProviderData.(*CleanEksProviderResourceData)
+
+	if !ok {
+		resp.Diagnostics.AddError(
+			"Unexpected Resource Configure Type",
+			fmt.Sprintf("Expected *CleanEksProviderResourceData, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+		)
+
+		return
+	}
+
+	r.clientset = cleanEksProviderResourceData.ClientSet
+	r.host = cleanEksProviderResourceData.Config.Host
+}
+
+func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, res *resource.CreateResponse) {
 	tflog.Debug(ctx, "Creating clean EKS resource")
 
 	// Load entire configuration into the model
-	var model jobResourceModel
+	var model JobResourceModel
 	res.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
 	if res.Diagnostics.HasError() {
 		return
@@ -121,8 +175,9 @@ func (r *jobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		"jobConfig": fmt.Sprintf("%+v", model),
 	})
 
-	var provider cleanEksProvider
-	res.Diagnostics.Append(req.ProviderMeta.Get(ctx, &provider)...)
+	clientset := r.clientset
+
+	var err error
 
 	removeAwsCni := true
 	if !(model.RemoveAwsCni.IsNull() || model.RemoveAwsCni.IsUnknown()) {
@@ -137,17 +192,6 @@ func (r *jobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	importCorednsToHelm := true
 	if !(model.ImportCorednsToHelm.IsNull() || model.ImportCorednsToHelm.IsUnknown()) {
 		importCorednsToHelm = model.ImportCorednsToHelm.ValueBool()
-	}
-
-	model.ID = basetypes.NewStringValue(provider.Endpoint)
-
-	clientset, err := provider.GetClient()
-	if err != nil {
-		res.Diagnostics.AddError(
-			"Error making request",
-			fmt.Sprintf("Error making request: %s", err),
-		)
-		return
 	}
 
 	if removeAwsCni || removeKubeProxy || importCorednsToHelm {
@@ -242,26 +286,28 @@ func (r *jobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	model.CorednsServiceLabelManagedBySet = basetypes.NewBoolValue(serviceManagedByLabelSet)
 	model.CorednsServiceLabelAmazonManagedRemoved = basetypes.NewBoolValue(serviceAmazonManagedLabelRemoved)
 
+	model.ID = basetypes.NewStringValue(r.host)
+
 	// Finally, set the state
 	tflog.Debug(ctx, "Storing job info into the state")
 	res.Diagnostics.Append(res.State.Set(ctx, model)...)
 }
 
-func (r *jobResource) Read(ctx context.Context, req resource.ReadRequest, res *resource.ReadResponse) {
+func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *resource.ReadResponse) {
 	// NO-OP: all there is to read is in the State, and response is already populated with that.
 	tflog.Debug(ctx, "Reading job from state")
 
 	// Load entire configuration into the model
-	var model jobResourceModel
+	var model JobResourceModel
 	res.Diagnostics.Append(req.State.Get(ctx, &model)...)
 	tflog.Debug(ctx, "Loaded job configuration", map[string]interface{}{
 		"jobConfig": fmt.Sprintf("%+v", model),
 	})
 
-	var provider cleanEksProvider
-	res.Diagnostics.Append(req.ProviderMeta.Get(ctx, &provider)...)
+	clientset := r.clientset
 
-	clientset, err := provider.GetClient()
+	var err error
+
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error making request",
@@ -324,11 +370,11 @@ func (r *jobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	res.Diagnostics.Append(res.State.Set(ctx, model)...)
 }
 
-func (r *jobResource) Update(ctx context.Context, req resource.UpdateRequest, res *resource.UpdateResponse) {
+func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, res *resource.UpdateResponse) {
 	tflog.Debug(ctx, "Updating job")
 
 	// Load entire configuration into the model
-	var model jobResourceModel
+	var model JobResourceModel
 	res.Diagnostics.Append(req.Plan.Get(ctx, &model)...)
 	if res.Diagnostics.HasError() {
 		return
@@ -337,8 +383,9 @@ func (r *jobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		"jobConfig": fmt.Sprintf("%+v", model),
 	})
 
-	var provider cleanEksProvider
-	res.Diagnostics.Append(req.ProviderMeta.Get(ctx, &provider)...)
+	clientset := r.clientset
+
+	var err error
 
 	removeAwsCni := true
 	if !(model.RemoveAwsCni.IsNull() || model.RemoveAwsCni.IsUnknown()) {
@@ -355,7 +402,6 @@ func (r *jobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		importCorednsToHelm = model.ImportCorednsToHelm.ValueBool()
 	}
 
-	clientset, err := provider.GetClient()
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error making request",
@@ -462,7 +508,11 @@ func (r *jobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	res.Diagnostics.Append(res.State.Set(ctx, model)...)
 }
 
-func (r *jobResource) Delete(ctx context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {
+func (r *JobResource) Delete(ctx context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {
 	// NO-OP: Returning no error is enough for the framework to remove the resource from state.
 	tflog.Debug(ctx, "Removing job from state")
+}
+
+func (r *JobResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
