@@ -1,4 +1,4 @@
-resource "eks_clean_job" "cluster" {
+resource "cleaneks_job" "cluster" {
   endpoint    = data.aws_eks_cluster.cluster.endpoint
   ca_cert_pem = base64decode(data.aws_eks_cluster.cluster.certificate_authority[0].data)
   token       = data.aws_eks_cluster_auth.cluster.token
@@ -15,9 +15,11 @@ module "eks" {
 }
 
 data "aws_eks_cluster" "cluster" {
-  name = module.eks.cluster_name
+  name       = module.eks.cluster_name
+  depends_on = [module.eks]
 }
 
 data "aws_eks_cluster_auth" "cluster" {
-  name = module.eks.cluster_name
+  name       = module.eks.cluster_name
+  depends_on = [module.eks]
 }
