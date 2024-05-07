@@ -1,4 +1,10 @@
 
+<a name="v0.0.1-prerelease.0"></a>
+## [v0.0.1-prerelease.0](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.0.0...v0.0.1-prerelease.0) (2024-05-07)
+
+### Fix
+- [99f15f6](https://github.com/taliesins/terraform-provider-cleaneks/commit/99f15f6edfb2b91415a515da332f39258cc187be) provider documentation
+
 <a name="v0.0.0"></a>
 ## v0.0.0 (2024-05-06)
 
