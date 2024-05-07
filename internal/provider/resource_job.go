@@ -4,13 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -38,52 +34,6 @@ func (r *jobResource) Schema(_ context.Context, req resource.SchemaRequest, resp
 				Computed:    true,
 			},
 
-			"endpoint": schema.StringAttribute{
-				Description: "The Kubernetes endpoint. Supported schemes are `http` and `https`.",
-				Required:    true,
-			},
-
-			"insecure": schema.BoolAttribute{
-				Description: "Disables verification of the server's certificate chain and hostname. Defaults to `false`",
-				Optional:    true,
-			},
-
-			"ca_cert_pem": schema.StringAttribute{
-				Description: "Certificate data of the Certificate Authority (CA) " +
-					"in [PEM (RFC 1421)](https://datatracker.ietf.org/doc/html/rfc1421) format.",
-				Optional: true,
-				Validators: []validator.String{
-					stringvalidator.ConflictsWith(path.MatchRoot("insecure")),
-				},
-			},
-
-			"client_cert_pem": schema.StringAttribute{
-				Description: "Client Certificate (PEM) to present to the target server." +
-					"in [PEM (RFC 1421)](https://datatracker.ietf.org/doc/html/rfc1421) format.",
-				Optional: true,
-				Validators: []validator.String{
-					stringvalidator.ConflictsWith(path.MatchRoot("token")),
-				},
-			},
-
-			"client_key_pem": schema.StringAttribute{
-				Description: "Client Certificate (PEM) private Key to use for mTLS.",
-				Optional:    true,
-				Sensitive:   true,
-				Validators: []validator.String{
-					stringvalidator.ConflictsWith(path.MatchRoot("token")),
-				},
-			},
-
-			"token": schema.StringAttribute{
-				Description: "The Kubernetes token.",
-				Optional:    true,
-				Sensitive:   true,
-				Validators: []validator.String{
-					stringvalidator.ConflictsWith(path.MatchRoot("client_cert_pem")),
-				},
-			},
-
 			"remove_aws_cni": schema.BoolAttribute{
 				Description: "Remove AWS-CNI from EKS cluster",
 				Optional:    true,
@@ -103,14 +53,6 @@ func (r *jobResource) Schema(_ context.Context, req resource.SchemaRequest, resp
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-			},
-
-			"request_timeout_ms": schema.Int64Attribute{
-				Description: "The request timeout in milliseconds.",
-				Optional:    true,
-				Validators: []validator.Int64{
-					int64validator.AtLeast(10),
-				},
 			},
 
 			"aws_cni_daemonset_exists": schema.BoolAttribute{
@@ -179,49 +121,8 @@ func (r *jobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		"jobConfig": fmt.Sprintf("%+v", model),
 	})
 
-	insecure := false
-	if !(model.Insecure.IsNull() || model.Insecure.IsUnknown()) {
-		insecure = model.Insecure.ValueBool()
-	}
-	caCertificate := ""
-	if !(model.CaCertificate.IsNull() || model.CaCertificate.IsUnknown()) {
-		caCertificate = model.CaCertificate.ValueString()
-	}
-
-	clientCertificate := ""
-	if !(model.ClientCertificate.IsNull() || model.ClientCertificate.IsUnknown()) {
-		clientCertificate = model.ClientCertificate.ValueString()
-	}
-	clientKey := ""
-	if !(model.ClientKey.IsNull() || model.ClientKey.IsUnknown()) {
-		clientKey = model.ClientKey.ValueString()
-	}
-	if (clientCertificate != "" && clientKey == "") || (clientCertificate == "" && clientKey != "") {
-		res.Diagnostics.AddError(
-			"Both Client Certificate and Client Key must be specified for Kubernetes Cluster",
-			fmt.Sprintf("Both Client Certificate and Client Key must be specified for Kubernetes Cluster"),
-		)
-		return
-	}
-
-	token := ""
-	if !(model.Token.IsNull() || model.Token.IsUnknown()) {
-		token = model.Token.ValueString()
-	}
-	if token == "" && clientCertificate == "" {
-		res.Diagnostics.AddError(
-			"Token or Client Certificate for Kubernetes Cluster must be specified",
-			fmt.Sprintf("Token or Client Certificate for Kubernetes Cluster must be specified"),
-		)
-		return
-	}
-
-	requestTimeout := int64(0)
-	if !(model.RequestTimeout.IsNull() || model.RequestTimeout.IsUnknown()) {
-		requestTimeout = model.RequestTimeout.ValueInt64()
-	}
-
-	endpoint := model.Endpoint.ValueString()
+	var provider cleanEksProvider
+	res.Diagnostics.Append(req.ProviderMeta.Get(ctx, &provider)...)
 
 	removeAwsCni := true
 	if !(model.RemoveAwsCni.IsNull() || model.RemoveAwsCni.IsUnknown()) {
@@ -238,9 +139,9 @@ func (r *jobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		importCorednsToHelm = model.ImportCorednsToHelm.ValueBool()
 	}
 
-	model.ID = model.Endpoint
+	model.ID = basetypes.NewStringValue(provider.Endpoint)
 
-	clientset, err := GetClient(endpoint, requestTimeout, insecure, caCertificate, token, clientCertificate, clientKey)
+	clientset, err := provider.GetClient()
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error making request",
@@ -353,52 +254,14 @@ func (r *jobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	// Load entire configuration into the model
 	var model jobResourceModel
 	res.Diagnostics.Append(req.State.Get(ctx, &model)...)
+	tflog.Debug(ctx, "Loaded job configuration", map[string]interface{}{
+		"jobConfig": fmt.Sprintf("%+v", model),
+	})
 
-	insecure := false
-	if !(model.Insecure.IsNull() || model.Insecure.IsUnknown()) {
-		insecure = model.Insecure.ValueBool()
-	}
-	caCertificate := ""
-	if !(model.CaCertificate.IsNull() || model.CaCertificate.IsUnknown()) {
-		caCertificate = model.CaCertificate.ValueString()
-	}
+	var provider cleanEksProvider
+	res.Diagnostics.Append(req.ProviderMeta.Get(ctx, &provider)...)
 
-	clientCertificate := ""
-	if !(model.ClientCertificate.IsNull() || model.ClientCertificate.IsUnknown()) {
-		clientCertificate = model.ClientCertificate.ValueString()
-	}
-	clientKey := ""
-	if !(model.ClientKey.IsNull() || model.ClientKey.IsUnknown()) {
-		clientKey = model.ClientKey.ValueString()
-	}
-	if (clientCertificate != "" && clientKey == "") || (clientCertificate == "" && clientKey != "") {
-		res.Diagnostics.AddError(
-			"Both Client Certificate and Client Key must be specified for Kubernetes Cluster",
-			fmt.Sprintf("Both Client Certificate and Client Key must be specified for Kubernetes Cluster"),
-		)
-		return
-	}
-
-	token := ""
-	if !(model.Token.IsNull() || model.Token.IsUnknown()) {
-		token = model.Token.ValueString()
-	}
-	if token == "" && clientCertificate == "" {
-		res.Diagnostics.AddError(
-			"Token or Client Certificate for Kubernetes Cluster must be specified",
-			fmt.Sprintf("Token or Client Certificate for Kubernetes Cluster must be specified"),
-		)
-		return
-	}
-
-	requestTimeout := int64(0)
-	if !(model.RequestTimeout.IsNull() || model.RequestTimeout.IsUnknown()) {
-		requestTimeout = model.RequestTimeout.ValueInt64()
-	}
-
-	endpoint := model.Endpoint.ValueString()
-
-	clientset, err := GetClient(endpoint, requestTimeout, insecure, caCertificate, token, clientCertificate, clientKey)
+	clientset, err := provider.GetClient()
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error making request",
@@ -474,49 +337,8 @@ func (r *jobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		"jobConfig": fmt.Sprintf("%+v", model),
 	})
 
-	insecure := false
-	if !(model.Insecure.IsNull() || model.Insecure.IsUnknown()) {
-		insecure = model.Insecure.ValueBool()
-	}
-	caCertificate := ""
-	if !(model.CaCertificate.IsNull() || model.CaCertificate.IsUnknown()) {
-		caCertificate = model.CaCertificate.ValueString()
-	}
-
-	clientCertificate := ""
-	if !(model.ClientCertificate.IsNull() || model.ClientCertificate.IsUnknown()) {
-		clientCertificate = model.ClientCertificate.ValueString()
-	}
-	clientKey := ""
-	if !(model.ClientKey.IsNull() || model.ClientKey.IsUnknown()) {
-		clientKey = model.ClientKey.ValueString()
-	}
-	if (clientCertificate != "" && clientKey == "") || (clientCertificate == "" && clientKey != "") {
-		res.Diagnostics.AddError(
-			"Both Client Certificate and Client Key must be specified for Kubernetes Cluster",
-			fmt.Sprintf("Both Client Certificate and Client Key must be specified for Kubernetes Cluster"),
-		)
-		return
-	}
-
-	token := ""
-	if !(model.Token.IsNull() || model.Token.IsUnknown()) {
-		token = model.Token.ValueString()
-	}
-	if token == "" && clientCertificate == "" {
-		res.Diagnostics.AddError(
-			"Token or Client Certificate and Client Key for Kubernetes Cluster must be specified",
-			fmt.Sprintf("Token or Client Certificate and Client Key for Kubernetes Cluster must be specified"),
-		)
-		return
-	}
-
-	requestTimeout := int64(0)
-	if !(model.RequestTimeout.IsNull() || model.RequestTimeout.IsUnknown()) {
-		requestTimeout = model.RequestTimeout.ValueInt64()
-	}
-
-	endpoint := model.Endpoint.ValueString()
+	var provider cleanEksProvider
+	res.Diagnostics.Append(req.ProviderMeta.Get(ctx, &provider)...)
 
 	removeAwsCni := true
 	if !(model.RemoveAwsCni.IsNull() || model.RemoveAwsCni.IsUnknown()) {
@@ -533,7 +355,7 @@ func (r *jobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		importCorednsToHelm = model.ImportCorednsToHelm.ValueBool()
 	}
 
-	clientset, err := GetClient(endpoint, requestTimeout, insecure, caCertificate, token, clientCertificate, clientKey)
+	clientset, err := provider.GetClient()
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error making request",
