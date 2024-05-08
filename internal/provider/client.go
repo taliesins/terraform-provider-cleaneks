@@ -342,16 +342,27 @@ func ImportDeploymentIntoHelm(ctx context.Context, clientset *kubernetes.Clients
 			delete(deployment.Labels, amazonManagedLabelName)
 		}
 
-		if deployment.Spec.Template.ObjectMeta.Labels == nil {
-			deployment.Spec.Template.ObjectMeta.Labels = make(map[string]string)
-		}
+		/*
+			if deployment.Spec.Selector.MatchLabels == nil {
+				deployment.Spec.Selector.MatchLabels = make(map[string]string)
+			}
 
-		// Update template spec so that pods will get the correct labels
-		_, ok = deployment.Spec.Template.ObjectMeta.Labels[amazonManagedLabelName]
-		if ok {
-			updated = true
-			delete(deployment.Spec.Template.ObjectMeta.Labels, amazonManagedLabelName)
-		}
+			_, ok = deployment.Spec.Selector.MatchLabels[amazonManagedLabelName]
+			if !ok {
+				// We can only remove the label if it is not part of the selector
+
+				if deployment.Spec.Template.ObjectMeta.Labels == nil {
+					deployment.Spec.Template.ObjectMeta.Labels = make(map[string]string)
+				}
+
+				// Update template spec so that pods will get the correct labels
+				_, ok = deployment.Spec.Template.ObjectMeta.Labels[amazonManagedLabelName]
+				if ok {
+					updated = true
+					delete(deployment.Spec.Template.ObjectMeta.Labels, amazonManagedLabelName)
+				}
+			}
+		*/
 
 		return updated, deployment
 	}
