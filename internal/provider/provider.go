@@ -66,7 +66,7 @@ func (p *CleanEksProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 	resp.Schema = schema.Schema{
 		Description: "A provider to bootstrap an EKS cluster by removing AWS CNI and Kube-Proxy. It will also add the required annotations and labels to CoreDNS so that Helm can manage CoreDNS. It will also drop managed by AWS labels from CoreDNS deployment and service.",
 		Attributes: map[string]schema.Attribute{
-			"endpoint": schema.StringAttribute{
+			"host": schema.StringAttribute{
 				Description: "The Kubernetes endpoint. Supported schemes are `http` and `https`.",
 				Required:    true,
 			},
@@ -76,7 +76,7 @@ func (p *CleanEksProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 				Optional:    true,
 			},
 
-			"ca_cert_pem": schema.StringAttribute{
+			"cluster_ca_certificate": schema.StringAttribute{
 				Description: "Certificate data of the Certificate Authority (CA) " +
 					"in [PEM (RFC 1421)](https://datatracker.ietf.org/doc/html/rfc1421) format.",
 				Optional: true,
@@ -179,7 +179,7 @@ func (p *CleanEksProvider) Configure(ctx context.Context, req provider.Configure
 		requestTimeout = model.RequestTimeout.ValueInt64()
 	}
 
-	endpoint := model.Host.ValueString()
+	host := model.Host.ValueString()
 
 	p.Insecure = insecure
 	p.CaCertificate = caCertificate
@@ -187,7 +187,7 @@ func (p *CleanEksProvider) Configure(ctx context.Context, req provider.Configure
 	p.ClientKey = clientKey
 	p.Token = token
 	p.RequestTimeout = requestTimeout
-	p.Host = endpoint
+	p.Host = host
 
 	clientSet, err := p.GetClient()
 	if err != nil {

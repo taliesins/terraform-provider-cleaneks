@@ -57,13 +57,13 @@ data "aws_eks_cluster_auth" "cluster" {
 
 ### Required
 
-- `endpoint` (String) The Kubernetes endpoint. Supported schemes are `http` and `https`.
+- `host` (String) The Kubernetes endpoint. Supported schemes are `http` and `https`.
 
 ### Optional
 
-- `ca_cert_pem` (String) Certificate data of the Certificate Authority (CA) in [PEM (RFC 1421)](https://datatracker.ietf.org/doc/html/rfc1421) format.
 - `client_cert_pem` (String) Client Certificate (PEM) to present to the target server.in [PEM (RFC 1421)](https://datatracker.ietf.org/doc/html/rfc1421) format.
 - `client_key_pem` (String, Sensitive) Client Certificate (PEM) private Key to use for mTLS.
+- `cluster_ca_certificate` (String) Certificate data of the Certificate Authority (CA) in [PEM (RFC 1421)](https://datatracker.ietf.org/doc/html/rfc1421) format.
 - `insecure` (Boolean) Disables verification of the server's certificate chain and hostname. Defaults to `false`
 - `request_timeout_ms` (Number) The request timeout in milliseconds.
 - `token` (String, Sensitive) The Kubernetes token.
