@@ -1,4 +1,10 @@
 
+<a name="v0.1.2"></a>
+## [v0.1.2](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.1...v0.1.2) (2024-05-08)
+
+### Fix
+- [7e8d068](https://github.com/taliesins/terraform-provider-cleaneks/commit/7e8d0680dcb2306c25022043c97948525dc55156) lint problem
+
 <a name="v0.1.1"></a>
 ## [v0.1.1](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.0...v0.1.1) (2024-05-08)
 
