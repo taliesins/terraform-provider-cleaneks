@@ -1,4 +1,10 @@
 
+<a name="v0.1.3"></a>
+## [v0.1.3](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.2...v0.1.3) (2024-05-08)
+
+### Fix
+- [c2425f7](https://github.com/taliesins/terraform-provider-cleaneks/commit/c2425f79e592236a33a0aba47a9498f0872b5682) reference to null labels or annotations
+
 <a name="v0.1.2"></a>
 ## [v0.1.2](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.1...v0.1.2) (2024-05-08)
 
