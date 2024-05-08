@@ -1,7 +1,7 @@
 ---
 page_title: "Provider: terraform-provider-cleaneks"
 description: |-
-  A provider to bootstrap an EKS cluster by removing AWS CNI and Kube-Proxy. It will also add the required annotations and labels to CoreDNS so that Helm can manage CoreDNS. It will also drop managed by AWS labels from CoreDNS deployment and service.
+  A provider to bootstrap an EKS cluster by removing **AWS CNI** and **Kube-Proxy**. It will also add the required annotations and labels to import `CoreDNS` into Helm. It will also drop managed by AWS labels from CoreDNS deployment and service.
 
 ---
 
@@ -58,24 +58,24 @@ data "aws_eks_cluster_auth" "cluster" {
 ### Optional
 
 - `burst_limit` (Number) Helm burst limit. Increase this if you have a cluster with many CRDs
-- `client_certificate` (String) PEM-encoded client certificate for TLS authentication.
-- `client_key` (String, Sensitive) PEM-encoded client certificate key for TLS authentication.
-- `cluster_ca_certificate` (String) PEM-encoded root certificates bundle for TLS authentication.
-- `config_context` (String)
-- `config_context_auth_info` (String)
-- `config_context_cluster` (String)
-- `config_path` (String) Path to the kube config file. Can be set with KUBE_CONFIG_PATH.
-- `config_paths` (List of List of String) A list of paths to kube config files. Can be set with KUBE_CONFIG_PATHS environment variable.
-- `exec` (Attributes List) A list of commands to execute. (see [below for nested schema](#nestedatt--exec))
-- `host` (String) The hostname (in form of URI) of Kubernetes master.
-- `insecure` (Boolean) Whether server should be accessed without verifying the TLS certificate.
-- `password` (String, Sensitive) The password to use for HTTP basic authentication when accessing the Kubernetes master endpoint.
-- `proxy_url` (String) URL to the proxy to be used for all API requests
-- `tls_server_name` (String) Server name passed to the server for SNI and is used in the client to check server certificates against.
-- `token` (String, Sensitive) Token to authenticate an service account
-- `username` (String) The username to use for HTTP basic authentication when accessing the Kubernetes master endpoint.
+- `client_certificate` (String) PEM-encoded client certificate for TLS authentication. Can be set with `KUBE_CLIENT_CERT_DATA` environment variable.
+- `client_key` (String, Sensitive) PEM-encoded client certificate key for TLS authentication. Can be set with `KUBE_CLIENT_KEY_DATA` environment variable.
+- `cluster_ca_certificate` (String) PEM-encoded root certificates bundle for TLS authentication. Can be set with `KUBE_CLUSTER_CA_CERT_DATA` environment variable.
+- `config_context` (String) Select the Kube context to use. Can be set with `KUBE_CTX` environment variable.
+- `config_context_auth_info` (String) Select the Kube authentication context to use. Can be set with `KUBE_CTX_AUTH_INFO` environment variable.
+- `config_context_cluster` (String) Select the Kube cluster context to use. Can be set with `KUBE_CTX_CLUSTER` environment variable.
+- `config_path` (String) Path to the kube config file. Can be set with `KUBE_CONFIG_PATH`.
+- `config_paths` (List of String) A list of paths to kube config files. Can be set with `KUBE_CONFIG_PATHS` environment variable.
+- `exec` (Block List) (see [below for nested schema](#nestedblock--exec))
+- `host` (String) The hostname (in form of URI) of Kubernetes master. Can be set with `KUBE_HOST` environment variable.
+- `insecure` (Boolean) Whether server should be accessed without verifying the TLS certificate. Can be set with `KUBE_INSECURE` environment variable.
+- `password` (String, Sensitive) The password to use for HTTP basic authentication when accessing the Kubernetes master endpoint. Can be set with `KUBE_PASSWORD` environment variable.
+- `proxy_url` (String) URL to the proxy to be used for all API requests. Can be set with `KUBE_PROXY_URL` environment variable.
+- `tls_server_name` (String) Server name passed to the server for SNI and is used in the client to check server certificates against. Can be set with `KUBE_TLS_SERVER_NAME` environment variable.
+- `token` (String, Sensitive) Token to authenticate an service account. Can be set with `KUBE_TOKEN` environment variable.
+- `username` (String) The username to use for HTTP basic authentication when accessing the Kubernetes master endpoint. Can be set with `KUBE_USER` environment variable.
 
-<a id="nestedatt--exec"></a>
+<a id="nestedblock--exec"></a>
 ### Nested Schema for `exec`
 
 Required:
@@ -84,6 +84,6 @@ Required:
 
 Optional:
 
-- `api_version` (String) The client authentication api version to use
-- `args` (Map of List of String) Arguments to pass to the command
+- `api_version` (String) The client authentication api Version to use
+- `args` (List of List of String) Arguments to pass to the command
 - `env` (Map of List of String) Environment variables to set for the command

@@ -83,17 +83,19 @@ func (r *JobResource) Schema(_ context.Context, req resource.SchemaRequest, resp
 			},
 
 			"remove_aws_cni": schema.BoolAttribute{
-				Description: "Remove AWS-CNI from EKS cluster",
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(true),
+				MarkdownDescription: "Remove **AWS-CNI** from EKS cluster",
+				Description:         "Remove AWS-CNI from EKS cluster",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(true),
 			},
 
 			"remove_kube_proxy": schema.BoolAttribute{
-				Description: "Remove Kube-Proxy from EKS cluster",
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(true),
+				MarkdownDescription: "Remove **Kube-Proxy** from EKS cluster",
+				Description:         "Remove Kube-Proxy from EKS cluster",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(true),
 			},
 
 			"import_coredns_to_helm": schema.BoolAttribute{
@@ -104,113 +106,135 @@ func (r *JobResource) Schema(_ context.Context, req resource.SchemaRequest, resp
 			},
 
 			"aws_cni_daemonset_exists": schema.BoolAttribute{
-				Description: `Does AWS CNI daemonset exist.`,
-				Computed:    true,
+				MarkdownDescription: "Does **AWS CNI** daemonset exist.",
+				Description:         "Does AWS CNI daemonset exist.",
+				Computed:            true,
 			},
 
 			"kube_proxy_daemonset_exists": schema.BoolAttribute{
-				Description: `Does Kube-Proxy daemonset exist.`,
-				Computed:    true,
+				MarkdownDescription: "Does **Kube-Proxy** daemonset exist.",
+				Description:         "Does Kube-Proxy daemonset exist.",
+				Computed:            true,
 			},
 
 			"coredns_deployment_label_helm_release_name_set": schema.BoolAttribute{
-				Description: `Does CoreDNS deployment have label meta.helm.sh/release-name with value of coredns.`,
-				Computed:    true,
+				MarkdownDescription: "Does CoreDNS deployment have label **meta.helm.sh/release-name** with value of **coredns**.",
+				Description:         "Does CoreDNS deployment have label meta.helm.sh/release-name with value of coredns.",
+				Computed:            true,
 			},
 
 			"coredns_deployment_label_helm_release_namespace_set": schema.BoolAttribute{
-				Description: `Does CoreDNS deployment have label meta.helm.sh/release-namespace with value of kube-system.`,
-				Computed:    true,
+				MarkdownDescription: "Does CoreDNS deployment have label **meta.helm.sh/release-namespace** with value of **kube-system**.",
+				Description:         "Does CoreDNS deployment have label meta.helm.sh/release-namespace with value of kube-system.",
+				Computed:            true,
 			},
 
 			"coredns_deployment_label_managed_by_set": schema.BoolAttribute{
-				Description: `Does CoreDNS deployment have label app.kubernetes.io/managed-by with value of Helm.`,
-				Computed:    true,
+				MarkdownDescription: "Does CoreDNS deployment have label **app.kubernetes.io/managed-by** with value of **Helm**.",
+				Description:         "Does CoreDNS deployment have label app.kubernetes.io/managed-by with value of Helm.",
+				Computed:            true,
 			},
 
 			"coredns_deployment_label_amazon_managed_removed": schema.BoolAttribute{
-				Description: `Is label eks.amazonaws.com/component removed.`,
-				Computed:    true,
+				MarkdownDescription: "Is label **eks.amazonaws.com/component** removed.",
+				Description:         "Is label eks.amazonaws.com/component removed.",
+				Computed:            true,
 			},
 
 			"coredns_service_label_helm_release_name_set": schema.BoolAttribute{
-				Description: `Does CoreDNS service have label meta.helm.sh/release-name with value of coredns.`,
-				Computed:    true,
+				MarkdownDescription: "Does CoreDNS service have label **meta.helm.sh/release-name** with value of **coredns**.",
+				Description:         "Does CoreDNS service have label meta.helm.sh/release-name with value of coredns.",
+				Computed:            true,
 			},
 
 			"coredns_service_label_helm_release_namespace_set": schema.BoolAttribute{
-				Description: `Does CoreDNS service have label meta.helm.sh/release-namespace with value of kube-system.`,
-				Computed:    true,
+				MarkdownDescription: "Does CoreDNS service have label **meta.helm.sh/release-namespace** with value of **kube-system**.",
+				Description:         "Does CoreDNS service have label meta.helm.sh/release-namespace with value of kube-system.",
+				Computed:            true,
 			},
 
 			"coredns_service_label_managed_by_set": schema.BoolAttribute{
-				Description: `Does CoreDNS service have label app.kubernetes.io/managed-by with value of Helm.`,
-				Computed:    true,
+				MarkdownDescription: "Does CoreDNS service have label **app.kubernetes.io/managed-by** with value of **Helm**.",
+				Description:         "Does CoreDNS service have label app.kubernetes.io/managed-by with value of Helm.",
+				Computed:            true,
 			},
 
 			"coredns_service_label_amazon_managed_removed": schema.BoolAttribute{
-				Description: `Is label eks.amazonaws.com/component removed.`,
-				Computed:    true,
+				MarkdownDescription: "Is label **eks.amazonaws.com/component** removed.",
+				Description:         "Is label eks.amazonaws.com/component removed.",
+				Computed:            true,
 			},
 
 			"coredns_service_account_label_helm_release_name_set": schema.BoolAttribute{
-				Description: `Does CoreDNS service have label meta.helm.sh/release-name with value of coredns.`,
-				Computed:    true,
+				MarkdownDescription: "Does CoreDNS service have label **meta.helm.sh/release-name** with value of **coredns**.",
+				Description:         "Does CoreDNS service have label meta.helm.sh/release-name with value of coredns.",
+				Computed:            true,
 			},
 
 			"coredns_service_account_label_helm_release_namespace_set": schema.BoolAttribute{
-				Description: `Does CoreDNS service have label meta.helm.sh/release-namespace with value of kube-system.`,
-				Computed:    true,
+				MarkdownDescription: "Does CoreDNS service have label **meta.helm.sh/release-namespace** with value of **kube-system**.",
+				Description:         "Does CoreDNS service have label meta.helm.sh/release-namespace with value of kube-system.",
+				Computed:            true,
 			},
 
 			"coredns_service_account_label_managed_by_set": schema.BoolAttribute{
-				Description: `Does CoreDNS service have label app.kubernetes.io/managed-by with value of Helm.`,
-				Computed:    true,
+				MarkdownDescription: "Does CoreDNS service have label **app.kubernetes.io/managed-by** with value of **Helm**.",
+				Description:         "Does CoreDNS service have label app.kubernetes.io/managed-by with value of Helm.",
+				Computed:            true,
 			},
 
 			"coredns_service_account_label_amazon_managed_removed": schema.BoolAttribute{
-				Description: `Is label eks.amazonaws.com/component removed.`,
-				Computed:    true,
+				MarkdownDescription: "Is label **eks.amazonaws.com/component** removed.",
+				Description:         "Is label eks.amazonaws.com/component removed.",
+				Computed:            true,
 			},
 
 			"coredns_config_map_label_helm_release_name_set": schema.BoolAttribute{
-				Description: `Does CoreDNS service have label meta.helm.sh/release-name with value of coredns.`,
-				Computed:    true,
+				MarkdownDescription: "Does CoreDNS service have label **meta.helm.sh/release-name** with value of **coredns**.",
+				Description:         "Does CoreDNS service have label meta.helm.sh/release-name with value of coredns.",
+				Computed:            true,
 			},
 
 			"coredns_config_map_label_helm_release_namespace_set": schema.BoolAttribute{
-				Description: `Does CoreDNS service have label meta.helm.sh/release-namespace with value of kube-system.`,
-				Computed:    true,
+				MarkdownDescription: "Does CoreDNS service have label **meta.helm.sh/release-namespace** with value of **kube-system**.",
+				Description:         "Does CoreDNS service have label meta.helm.sh/release-namespace with value of kube-system.",
+				Computed:            true,
 			},
 
 			"coredns_config_map_label_managed_by_set": schema.BoolAttribute{
-				Description: `Does CoreDNS service have label app.kubernetes.io/managed-by with value of Helm.`,
-				Computed:    true,
+				MarkdownDescription: "Does CoreDNS service have label **app.kubernetes.io/managed-by** with value of **Helm**.",
+				Description:         "Does CoreDNS service have label app.kubernetes.io/managed-by with value of Helm.",
+				Computed:            true,
 			},
 
 			"coredns_config_map_label_amazon_managed_removed": schema.BoolAttribute{
-				Description: `Is label eks.amazonaws.com/component removed.`,
-				Computed:    true,
+				MarkdownDescription: "Is label **eks.amazonaws.com/component** removed.",
+				Description:         "Is label eks.amazonaws.com/component removed.",
+				Computed:            true,
 			},
 
 			"coredns_pod_disruption_budget_label_helm_release_name_set": schema.BoolAttribute{
-				Description: `Does CoreDNS service have label meta.helm.sh/release-name with value of coredns.`,
-				Computed:    true,
+				MarkdownDescription: "Does CoreDNS service have label **meta.helm.sh/release-name** with value of **coredns**.",
+				Description:         "Does CoreDNS service have label meta.helm.sh/release-name with value of coredns.",
+				Computed:            true,
 			},
 
 			"coredns_pod_disruption_budget_label_helm_release_namespace_set": schema.BoolAttribute{
-				Description: `Does CoreDNS service have label meta.helm.sh/release-namespace with value of kube-system.`,
-				Computed:    true,
+				MarkdownDescription: "Does CoreDNS service have label **meta.helm.sh/release-namespace** with value of **kube-system**.",
+				Description:         "Does CoreDNS service have label meta.helm.sh/release-namespace with value of kube-system.",
+				Computed:            true,
 			},
 
 			"coredns_pod_disruption_budget_label_managed_by_set": schema.BoolAttribute{
-				Description: `Does CoreDNS service have label app.kubernetes.io/managed-by with value of Helm.`,
-				Computed:    true,
+				MarkdownDescription: "Does CoreDNS service have label **app.kubernetes.io/managed-by** with value of **Helm**.",
+				Description:         "Does CoreDNS service have label app.kubernetes.io/managed-by with value of Helm.",
+				Computed:            true,
 			},
 
 			"coredns_pod_disruption_budget_label_amazon_managed_removed": schema.BoolAttribute{
-				Description: `Is label eks.amazonaws.com/component removed.`,
-				Computed:    true,
+				MarkdownDescription: "Is label **eks.amazonaws.com/component** removed.",
+				Description:         "Is label eks.amazonaws.com/component removed.",
+				Computed:            true,
 			},
 		},
 	}
@@ -222,7 +246,7 @@ func (r *JobResource) Configure(ctx context.Context, req resource.ConfigureReque
 		return
 	}
 
-	cleanEksProviderResourceData, ok := req.ProviderData.(*CleanEksProviderResourceData)
+	cleanEksProviderResourceData, ok := req.ProviderData.(*CleanEksProvider)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -234,7 +258,7 @@ func (r *JobResource) Configure(ctx context.Context, req resource.ConfigureReque
 	}
 
 	r.clientset = cleanEksProviderResourceData.ClientSet
-	r.host = cleanEksProviderResourceData.Config.Host
+	r.host = cleanEksProviderResourceData.Host
 }
 
 func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, res *resource.CreateResponse) {

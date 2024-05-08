@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -321,7 +322,7 @@ func ImportDeploymentIntoHelm(ctx context.Context, clientset *kubernetes.Clients
 			delete(deployment.Labels, amazonManagedLabelName)
 		}
 
-		//Update template spec so that pods will get the correct labels
+		// Update template spec so that pods will get the correct labels
 		_, ok = deployment.Spec.Template.ObjectMeta.Annotations[amazonManagedLabelName]
 		if ok {
 			updated = true
