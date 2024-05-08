@@ -2,17 +2,12 @@ package provider
 
 import (
 	"context"
-	"net/http"
-	"net/url"
-	"time"
-
-	"golang.org/x/net/http/httpproxy"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 )
 
@@ -26,52 +21,6 @@ const managedByLabelName string = "app.kubernetes.io/managed-by"
 const managedByLabelValue string = "Helm"
 
 const amazonManagedLabelName string = "eks.amazonaws.com/component"
-
-func (p *CleanEksProvider) GetClient() (clientset *kubernetes.Clientset, err error) {
-	host := p.Host
-	timeout := p.RequestTimeout
-	insecure := p.Insecure
-	caCertificate := p.CaCertificate
-	token := p.Token
-	clientCertificate := p.ClientCertificate
-	clientKey := p.ClientKey
-
-	proxy := func(req *http.Request) (*url.URL, error) {
-		return httpproxy.FromEnvironment().ProxyFunc()(req.URL)
-	}
-
-	config := &rest.Config{
-		Host: host,
-		TLSClientConfig: rest.TLSClientConfig{
-			Insecure: insecure,
-		},
-		Timeout: time.Duration(timeout) * time.Millisecond,
-		Proxy:   proxy,
-	}
-
-	if token != "" {
-		config.BearerToken = token
-	}
-
-	if caCertificate != "" {
-		config.TLSClientConfig.CAData = []byte(caCertificate)
-	}
-
-	if clientCertificate != "" {
-		config.TLSClientConfig.CertData = []byte(clientCertificate)
-	}
-
-	if clientKey != "" {
-		config.TLSClientConfig.KeyData = []byte(clientKey)
-	}
-
-	clientset, err = kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
-	return clientset, nil
-}
 
 func DaemonsetExist(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
 	_, err = clientset.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -221,6 +170,120 @@ func ServiceImportedIntoHelm(ctx context.Context, clientset *kubernetes.Clientse
 	return helmReleaseNameAnnotationSet, helmReleaseNamespaceAnnotationSet, managedByLabelSet, amazonManagedLabelRemoved, nil
 }
 
+func ServiceAccountImportedIntoHelm(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (helmReleaseNameAnnotationSet bool, helmReleaseNamespaceAnnotationSet bool, managedByLabelSet bool, amazonManagedLabelRemoved bool, err error) {
+	helmReleaseNameAnnotationSet = false
+	helmReleaseNamespaceAnnotationSet = false
+	managedByLabelSet = false
+	amazonManagedLabelRemoved = false
+
+	serviceAccount, err := clientset.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return false, false, false, false, err
+	}
+
+	if serviceAccount.Labels == nil || serviceAccount.Annotations == nil {
+		return false, false, false, false, err
+	}
+
+	value, ok := serviceAccount.Annotations[helmReleaseNameAnnotationName]
+	if ok && value == helmReleaseNameAnnotationValue {
+		helmReleaseNameAnnotationSet = true
+	}
+
+	value, ok = serviceAccount.Annotations[helmReleaseNamespaceAnnotationName]
+	if ok && value == helmReleaseNamespaceAnnotationValue {
+		helmReleaseNamespaceAnnotationSet = true
+	}
+
+	value, ok = serviceAccount.Labels[managedByLabelName]
+	if ok && value == managedByLabelValue {
+		managedByLabelSet = true
+	}
+
+	_, ok = serviceAccount.Annotations[amazonManagedLabelName]
+	if !ok {
+		amazonManagedLabelRemoved = true
+	}
+
+	return helmReleaseNameAnnotationSet, helmReleaseNamespaceAnnotationSet, managedByLabelSet, amazonManagedLabelRemoved, nil
+}
+
+func PodDisruptionBudgetImportedIntoHelm(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (helmReleaseNameAnnotationSet bool, helmReleaseNamespaceAnnotationSet bool, managedByLabelSet bool, amazonManagedLabelRemoved bool, err error) {
+	helmReleaseNameAnnotationSet = false
+	helmReleaseNamespaceAnnotationSet = false
+	managedByLabelSet = false
+	amazonManagedLabelRemoved = false
+
+	podDisruptionBudget, err := clientset.PolicyV1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return false, false, false, false, err
+	}
+
+	if podDisruptionBudget.Labels == nil || podDisruptionBudget.Annotations == nil {
+		return false, false, false, false, err
+	}
+
+	value, ok := podDisruptionBudget.Annotations[helmReleaseNameAnnotationName]
+	if ok && value == helmReleaseNameAnnotationValue {
+		helmReleaseNameAnnotationSet = true
+	}
+
+	value, ok = podDisruptionBudget.Annotations[helmReleaseNamespaceAnnotationName]
+	if ok && value == helmReleaseNamespaceAnnotationValue {
+		helmReleaseNamespaceAnnotationSet = true
+	}
+
+	value, ok = podDisruptionBudget.Labels[managedByLabelName]
+	if ok && value == managedByLabelValue {
+		managedByLabelSet = true
+	}
+
+	_, ok = podDisruptionBudget.Annotations[amazonManagedLabelName]
+	if !ok {
+		amazonManagedLabelRemoved = true
+	}
+
+	return helmReleaseNameAnnotationSet, helmReleaseNamespaceAnnotationSet, managedByLabelSet, amazonManagedLabelRemoved, nil
+}
+
+func ConfigMapImportedIntoHelm(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (helmReleaseNameAnnotationSet bool, helmReleaseNamespaceAnnotationSet bool, managedByLabelSet bool, amazonManagedLabelRemoved bool, err error) {
+	helmReleaseNameAnnotationSet = false
+	helmReleaseNamespaceAnnotationSet = false
+	managedByLabelSet = false
+	amazonManagedLabelRemoved = false
+
+	configMap, err := clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return false, false, false, false, err
+	}
+
+	if configMap.Labels == nil || configMap.Annotations == nil {
+		return false, false, false, false, err
+	}
+
+	value, ok := configMap.Annotations[helmReleaseNameAnnotationName]
+	if ok && value == helmReleaseNameAnnotationValue {
+		helmReleaseNameAnnotationSet = true
+	}
+
+	value, ok = configMap.Annotations[helmReleaseNamespaceAnnotationName]
+	if ok && value == helmReleaseNamespaceAnnotationValue {
+		helmReleaseNamespaceAnnotationSet = true
+	}
+
+	value, ok = configMap.Labels[managedByLabelName]
+	if ok && value == managedByLabelValue {
+		managedByLabelSet = true
+	}
+
+	_, ok = configMap.Annotations[amazonManagedLabelName]
+	if !ok {
+		amazonManagedLabelRemoved = true
+	}
+
+	return helmReleaseNameAnnotationSet, helmReleaseNamespaceAnnotationSet, managedByLabelSet, amazonManagedLabelRemoved, nil
+}
+
 func ImportDeploymentIntoHelm(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (err error) {
 	patchFunc := func(deployment *appsv1.Deployment) (bool, *appsv1.Deployment) {
 		updated := false
@@ -256,6 +319,13 @@ func ImportDeploymentIntoHelm(ctx context.Context, clientset *kubernetes.Clients
 		if ok {
 			updated = true
 			delete(deployment.Labels, amazonManagedLabelName)
+		}
+
+		//Update template spec so that pods will get the correct labels
+		_, ok = deployment.Spec.Template.ObjectMeta.Annotations[amazonManagedLabelName]
+		if ok {
+			updated = true
+			delete(deployment.Spec.Template.ObjectMeta.Annotations, amazonManagedLabelName)
 		}
 
 		return updated, deployment
@@ -330,6 +400,177 @@ func ImportServiceIntoHelm(ctx context.Context, clientset *kubernetes.Clientset,
 		}
 
 		_, err = clientset.CoreV1().Services(namespace).Update(ctx, updatedService, metav1.UpdateOptions{})
+		return err
+	})
+	return err
+}
+
+func ImportServiceAccountIntoHelm(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (err error) {
+	patchFunc := func(serviceAccount *corev1.ServiceAccount) (bool, *corev1.ServiceAccount) {
+		updated := false
+		value := ""
+
+		if serviceAccount.Labels == nil {
+			serviceAccount.Labels = make(map[string]string)
+		}
+
+		value, ok := serviceAccount.Annotations[helmReleaseNameAnnotationName]
+		if !ok || value != helmReleaseNameAnnotationValue {
+			updated = true
+			serviceAccount.Annotations[helmReleaseNameAnnotationName] = helmReleaseNameAnnotationValue
+		}
+
+		value, ok = serviceAccount.Annotations[helmReleaseNamespaceAnnotationName]
+		if !ok || value != helmReleaseNamespaceAnnotationValue {
+			updated = true
+			serviceAccount.Annotations[helmReleaseNamespaceAnnotationName] = helmReleaseNamespaceAnnotationValue
+		}
+
+		if serviceAccount.Annotations == nil {
+			serviceAccount.Annotations = make(map[string]string)
+		}
+
+		value, ok = serviceAccount.Labels[managedByLabelName]
+		if !ok || value != managedByLabelValue {
+			updated = true
+			serviceAccount.Labels[managedByLabelName] = managedByLabelValue
+		}
+
+		_, ok = serviceAccount.Annotations[amazonManagedLabelName]
+		if ok {
+			updated = true
+			delete(serviceAccount.Labels, amazonManagedLabelName)
+		}
+
+		return updated, serviceAccount
+	}
+
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		serviceAccount, err := clientset.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		updated, updatedServiceAccount := patchFunc(serviceAccount.DeepCopy())
+		if !updated {
+			return nil
+		}
+
+		_, err = clientset.CoreV1().ServiceAccounts(namespace).Update(ctx, updatedServiceAccount, metav1.UpdateOptions{})
+		return err
+	})
+	return err
+}
+
+func ImportPodDisruptionBudgetIntoHelm(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (err error) {
+	patchFunc := func(serviceAccount *policyv1.PodDisruptionBudget) (bool, *policyv1.PodDisruptionBudget) {
+		updated := false
+		value := ""
+
+		if serviceAccount.Labels == nil {
+			serviceAccount.Labels = make(map[string]string)
+		}
+
+		value, ok := serviceAccount.Annotations[helmReleaseNameAnnotationName]
+		if !ok || value != helmReleaseNameAnnotationValue {
+			updated = true
+			serviceAccount.Annotations[helmReleaseNameAnnotationName] = helmReleaseNameAnnotationValue
+		}
+
+		value, ok = serviceAccount.Annotations[helmReleaseNamespaceAnnotationName]
+		if !ok || value != helmReleaseNamespaceAnnotationValue {
+			updated = true
+			serviceAccount.Annotations[helmReleaseNamespaceAnnotationName] = helmReleaseNamespaceAnnotationValue
+		}
+
+		if serviceAccount.Annotations == nil {
+			serviceAccount.Annotations = make(map[string]string)
+		}
+
+		value, ok = serviceAccount.Labels[managedByLabelName]
+		if !ok || value != managedByLabelValue {
+			updated = true
+			serviceAccount.Labels[managedByLabelName] = managedByLabelValue
+		}
+
+		_, ok = serviceAccount.Annotations[amazonManagedLabelName]
+		if ok {
+			updated = true
+			delete(serviceAccount.Labels, amazonManagedLabelName)
+		}
+
+		return updated, serviceAccount
+	}
+
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		podDisruptionBudget, err := clientset.PolicyV1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		updated, updatedPodDisruptionBudget := patchFunc(podDisruptionBudget.DeepCopy())
+		if !updated {
+			return nil
+		}
+
+		_, err = clientset.PolicyV1().PodDisruptionBudgets(namespace).Update(ctx, updatedPodDisruptionBudget, metav1.UpdateOptions{})
+		return err
+	})
+	return err
+}
+
+func ImportConfigMapAccountIntoHelm(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (err error) {
+	patchFunc := func(configMap *corev1.ConfigMap) (bool, *corev1.ConfigMap) {
+		updated := false
+		value := ""
+
+		if configMap.Labels == nil {
+			configMap.Labels = make(map[string]string)
+		}
+
+		value, ok := configMap.Annotations[helmReleaseNameAnnotationName]
+		if !ok || value != helmReleaseNameAnnotationValue {
+			updated = true
+			configMap.Annotations[helmReleaseNameAnnotationName] = helmReleaseNameAnnotationValue
+		}
+
+		value, ok = configMap.Annotations[helmReleaseNamespaceAnnotationName]
+		if !ok || value != helmReleaseNamespaceAnnotationValue {
+			updated = true
+			configMap.Annotations[helmReleaseNamespaceAnnotationName] = helmReleaseNamespaceAnnotationValue
+		}
+
+		if configMap.Annotations == nil {
+			configMap.Annotations = make(map[string]string)
+		}
+
+		value, ok = configMap.Labels[managedByLabelName]
+		if !ok || value != managedByLabelValue {
+			updated = true
+			configMap.Labels[managedByLabelName] = managedByLabelValue
+		}
+
+		_, ok = configMap.Annotations[amazonManagedLabelName]
+		if ok {
+			updated = true
+			delete(configMap.Labels, amazonManagedLabelName)
+		}
+
+		return updated, configMap
+	}
+
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		configMap, err := clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		updated, updatedConfigMap := patchFunc(configMap.DeepCopy())
+		if !updated {
+			return nil
+		}
+
+		_, err = clientset.CoreV1().ConfigMaps(namespace).Update(ctx, updatedConfigMap, metav1.UpdateOptions{})
 		return err
 	})
 	return err

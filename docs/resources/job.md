@@ -53,10 +53,22 @@ data "aws_eks_cluster_auth" "cluster" {
 ### Read-Only
 
 - `aws_cni_daemonset_exists` (Boolean) Does AWS CNI daemonset exist.
+- `coredns_config_map_label_amazon_managed_removed` (Boolean) Is label eks.amazonaws.com/component removed.
+- `coredns_config_map_label_helm_release_name_set` (Boolean) Does CoreDNS service have label meta.helm.sh/release-name with value of coredns.
+- `coredns_config_map_label_helm_release_namespace_set` (Boolean) Does CoreDNS service have label meta.helm.sh/release-namespace with value of kube-system.
+- `coredns_config_map_label_managed_by_set` (Boolean) Does CoreDNS service have label app.kubernetes.io/managed-by with value of Helm.
 - `coredns_deployment_label_amazon_managed_removed` (Boolean) Is label eks.amazonaws.com/component removed.
 - `coredns_deployment_label_helm_release_name_set` (Boolean) Does CoreDNS deployment have label meta.helm.sh/release-name with value of coredns.
 - `coredns_deployment_label_helm_release_namespace_set` (Boolean) Does CoreDNS deployment have label meta.helm.sh/release-namespace with value of kube-system.
 - `coredns_deployment_label_managed_by_set` (Boolean) Does CoreDNS deployment have label app.kubernetes.io/managed-by with value of Helm.
+- `coredns_pod_disruption_budget_label_amazon_managed_removed` (Boolean) Is label eks.amazonaws.com/component removed.
+- `coredns_pod_disruption_budget_label_helm_release_name_set` (Boolean) Does CoreDNS service have label meta.helm.sh/release-name with value of coredns.
+- `coredns_pod_disruption_budget_label_helm_release_namespace_set` (Boolean) Does CoreDNS service have label meta.helm.sh/release-namespace with value of kube-system.
+- `coredns_pod_disruption_budget_label_managed_by_set` (Boolean) Does CoreDNS service have label app.kubernetes.io/managed-by with value of Helm.
+- `coredns_service_account_label_amazon_managed_removed` (Boolean) Is label eks.amazonaws.com/component removed.
+- `coredns_service_account_label_helm_release_name_set` (Boolean) Does CoreDNS service have label meta.helm.sh/release-name with value of coredns.
+- `coredns_service_account_label_helm_release_namespace_set` (Boolean) Does CoreDNS service have label meta.helm.sh/release-namespace with value of kube-system.
+- `coredns_service_account_label_managed_by_set` (Boolean) Does CoreDNS service have label app.kubernetes.io/managed-by with value of Helm.
 - `coredns_service_label_amazon_managed_removed` (Boolean) Is label eks.amazonaws.com/component removed.
 - `coredns_service_label_helm_release_name_set` (Boolean) Does CoreDNS service have label meta.helm.sh/release-name with value of coredns.
 - `coredns_service_label_helm_release_namespace_set` (Boolean) Does CoreDNS service have label meta.helm.sh/release-namespace with value of kube-system.

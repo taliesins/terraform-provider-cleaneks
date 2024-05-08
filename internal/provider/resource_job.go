@@ -47,6 +47,21 @@ type JobResourceModel struct {
 	CorednsServiceLabelHelmReleaseNamespaceSet types.Bool `tfsdk:"coredns_service_label_helm_release_namespace_set"`
 	CorednsServiceLabelManagedBySet            types.Bool `tfsdk:"coredns_service_label_managed_by_set"`
 	CorednsServiceLabelAmazonManagedRemoved    types.Bool `tfsdk:"coredns_service_label_amazon_managed_removed"`
+
+	CorednsServiceAccountLabelHelmReleaseNameSet      types.Bool `tfsdk:"coredns_service_account_label_helm_release_name_set"`
+	CorednsServiceAccountLabelHelmReleaseNamespaceSet types.Bool `tfsdk:"coredns_service_account_label_helm_release_namespace_set"`
+	CorednsServiceAccountLabelManagedBySet            types.Bool `tfsdk:"coredns_service_account_label_managed_by_set"`
+	CorednsServiceAccountLabelAmazonManagedRemoved    types.Bool `tfsdk:"coredns_service_account_label_amazon_managed_removed"`
+
+	CorednsConfigMapLabelHelmReleaseNameSet      types.Bool `tfsdk:"coredns_config_map_label_helm_release_name_set"`
+	CorednsConfigMapLabelHelmReleaseNamespaceSet types.Bool `tfsdk:"coredns_config_map_label_helm_release_namespace_set"`
+	CorednsConfigMapLabelManagedBySet            types.Bool `tfsdk:"coredns_config_map_label_managed_by_set"`
+	CorednsConfigMapLabelAmazonManagedRemoved    types.Bool `tfsdk:"coredns_config_map_label_amazon_managed_removed"`
+
+	CorednsPodDistruptionBudgetLabelHelmReleaseNameSet      types.Bool `tfsdk:"coredns_pod_disruption_budget_label_helm_release_name_set"`
+	CorednsPodDistruptionBudgetLabelHelmReleaseNamespaceSet types.Bool `tfsdk:"coredns_pod_disruption_budget_label_helm_release_namespace_set"`
+	CorednsPodDistruptionBudgetLabelManagedBySet            types.Bool `tfsdk:"coredns_pod_disruption_budget_label_managed_by_set"`
+	CorednsPodDistruptionBudgetLabelAmazonManagedRemoved    types.Bool `tfsdk:"coredns_pod_disruption_budget_label_amazon_managed_removed"`
 }
 
 func (r *JobResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -134,6 +149,66 @@ func (r *JobResource) Schema(_ context.Context, req resource.SchemaRequest, resp
 			},
 
 			"coredns_service_label_amazon_managed_removed": schema.BoolAttribute{
+				Description: `Is label eks.amazonaws.com/component removed.`,
+				Computed:    true,
+			},
+
+			"coredns_service_account_label_helm_release_name_set": schema.BoolAttribute{
+				Description: `Does CoreDNS service have label meta.helm.sh/release-name with value of coredns.`,
+				Computed:    true,
+			},
+
+			"coredns_service_account_label_helm_release_namespace_set": schema.BoolAttribute{
+				Description: `Does CoreDNS service have label meta.helm.sh/release-namespace with value of kube-system.`,
+				Computed:    true,
+			},
+
+			"coredns_service_account_label_managed_by_set": schema.BoolAttribute{
+				Description: `Does CoreDNS service have label app.kubernetes.io/managed-by with value of Helm.`,
+				Computed:    true,
+			},
+
+			"coredns_service_account_label_amazon_managed_removed": schema.BoolAttribute{
+				Description: `Is label eks.amazonaws.com/component removed.`,
+				Computed:    true,
+			},
+
+			"coredns_config_map_label_helm_release_name_set": schema.BoolAttribute{
+				Description: `Does CoreDNS service have label meta.helm.sh/release-name with value of coredns.`,
+				Computed:    true,
+			},
+
+			"coredns_config_map_label_helm_release_namespace_set": schema.BoolAttribute{
+				Description: `Does CoreDNS service have label meta.helm.sh/release-namespace with value of kube-system.`,
+				Computed:    true,
+			},
+
+			"coredns_config_map_label_managed_by_set": schema.BoolAttribute{
+				Description: `Does CoreDNS service have label app.kubernetes.io/managed-by with value of Helm.`,
+				Computed:    true,
+			},
+
+			"coredns_config_map_label_amazon_managed_removed": schema.BoolAttribute{
+				Description: `Is label eks.amazonaws.com/component removed.`,
+				Computed:    true,
+			},
+
+			"coredns_pod_disruption_budget_label_helm_release_name_set": schema.BoolAttribute{
+				Description: `Does CoreDNS service have label meta.helm.sh/release-name with value of coredns.`,
+				Computed:    true,
+			},
+
+			"coredns_pod_disruption_budget_label_helm_release_namespace_set": schema.BoolAttribute{
+				Description: `Does CoreDNS service have label meta.helm.sh/release-namespace with value of kube-system.`,
+				Computed:    true,
+			},
+
+			"coredns_pod_disruption_budget_label_managed_by_set": schema.BoolAttribute{
+				Description: `Does CoreDNS service have label app.kubernetes.io/managed-by with value of Helm.`,
+				Computed:    true,
+			},
+
+			"coredns_pod_disruption_budget_label_amazon_managed_removed": schema.BoolAttribute{
 				Description: `Is label eks.amazonaws.com/component removed.`,
 				Computed:    true,
 			},
@@ -235,6 +310,33 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 				)
 				return
 			}
+
+			err = ImportServiceAccountIntoHelm(ctx, clientset, "kube-system", "coredns")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error importing CoreDns service account to Helm",
+					fmt.Sprintf("Error importing CoreDns service account to Helm: %s", err),
+				)
+				return
+			}
+
+			err = ImportConfigMapAccountIntoHelm(ctx, clientset, "kube-system", "coredns")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error importing CoreDns config map to Helm",
+					fmt.Sprintf("Error importing CoreDns config map to Helm: %s", err),
+				)
+				return
+			}
+
+			err = ImportPodDisruptionBudgetIntoHelm(ctx, clientset, "kube-system", "coredns")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error importing CoreDns pod disruption budget to Helm",
+					fmt.Sprintf("Error importing CoreDns pod disruption budget to Helm: %s", err),
+				)
+				return
+			}
 		}
 	}
 
@@ -285,6 +387,48 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	model.CorednsServiceLabelHelmReleaseNamespaceSet = basetypes.NewBoolValue(serviceHelmReleaseNamespaceAnnotationSet)
 	model.CorednsServiceLabelManagedBySet = basetypes.NewBoolValue(serviceManagedByLabelSet)
 	model.CorednsServiceLabelAmazonManagedRemoved = basetypes.NewBoolValue(serviceAmazonManagedLabelRemoved)
+
+	serviceAccountHelmReleaseNameAnnotationSet, serviceAccountHelmReleaseNamespaceAnnotationSet, serviceAccountManagedByLabelSet, serviceAccountAmazonManagedLabelRemoved, err := ServiceAccountImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking CoreDns service account to Helm",
+			fmt.Sprintf("Error checking CoreDns service account to Helm: %s", err),
+		)
+		return
+	}
+
+	model.CorednsServiceAccountLabelHelmReleaseNameSet = basetypes.NewBoolValue(serviceAccountHelmReleaseNameAnnotationSet)
+	model.CorednsServiceAccountLabelHelmReleaseNamespaceSet = basetypes.NewBoolValue(serviceAccountHelmReleaseNamespaceAnnotationSet)
+	model.CorednsServiceAccountLabelManagedBySet = basetypes.NewBoolValue(serviceAccountManagedByLabelSet)
+	model.CorednsServiceAccountLabelAmazonManagedRemoved = basetypes.NewBoolValue(serviceAccountAmazonManagedLabelRemoved)
+
+	configMapHelmReleaseNameAnnotationSet, configMapHelmReleaseNamespaceAnnotationSet, configMapManagedByLabelSet, configMapAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking CoreDns config map to Helm",
+			fmt.Sprintf("Error checking CoreDns config map to Helm: %s", err),
+		)
+		return
+	}
+
+	model.CorednsConfigMapLabelHelmReleaseNameSet = basetypes.NewBoolValue(configMapHelmReleaseNameAnnotationSet)
+	model.CorednsConfigMapLabelHelmReleaseNamespaceSet = basetypes.NewBoolValue(configMapHelmReleaseNamespaceAnnotationSet)
+	model.CorednsConfigMapLabelManagedBySet = basetypes.NewBoolValue(configMapManagedByLabelSet)
+	model.CorednsConfigMapLabelAmazonManagedRemoved = basetypes.NewBoolValue(configMapAmazonManagedLabelRemoved)
+
+	podDistruptionBudgetHelmReleaseNameAnnotationSet, podDistruptionBudgetHelmReleaseNamespaceAnnotationSet, podDistruptionBudgetManagedByLabelSet, podDistruptionBudgetAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking CoreDns pod disruption budget to Helm",
+			fmt.Sprintf("Error checking CoreDns pod disruption budget to Helm: %s", err),
+		)
+		return
+	}
+
+	model.CorednsPodDistruptionBudgetLabelHelmReleaseNameSet = basetypes.NewBoolValue(podDistruptionBudgetHelmReleaseNameAnnotationSet)
+	model.CorednsPodDistruptionBudgetLabelHelmReleaseNamespaceSet = basetypes.NewBoolValue(podDistruptionBudgetHelmReleaseNamespaceAnnotationSet)
+	model.CorednsPodDistruptionBudgetLabelManagedBySet = basetypes.NewBoolValue(podDistruptionBudgetManagedByLabelSet)
+	model.CorednsPodDistruptionBudgetLabelAmazonManagedRemoved = basetypes.NewBoolValue(podDistruptionBudgetAmazonManagedLabelRemoved)
 
 	model.ID = basetypes.NewStringValue(r.host)
 
@@ -364,6 +508,48 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	model.CorednsServiceLabelHelmReleaseNamespaceSet = basetypes.NewBoolValue(serviceHelmReleaseNamespaceAnnotationSet)
 	model.CorednsServiceLabelManagedBySet = basetypes.NewBoolValue(serviceManagedByLabelSet)
 	model.CorednsServiceLabelAmazonManagedRemoved = basetypes.NewBoolValue(serviceAmazonManagedLabelRemoved)
+
+	serviceAccountHelmReleaseNameAnnotationSet, serviceAccountHelmReleaseNamespaceAnnotationSet, serviceAccountManagedByLabelSet, serviceAccountAmazonManagedLabelRemoved, err := ServiceAccountImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking CoreDns service account to Helm",
+			fmt.Sprintf("Error checking CoreDns service account to Helm: %s", err),
+		)
+		return
+	}
+
+	model.CorednsServiceAccountLabelHelmReleaseNameSet = basetypes.NewBoolValue(serviceAccountHelmReleaseNameAnnotationSet)
+	model.CorednsServiceAccountLabelHelmReleaseNamespaceSet = basetypes.NewBoolValue(serviceAccountHelmReleaseNamespaceAnnotationSet)
+	model.CorednsServiceAccountLabelManagedBySet = basetypes.NewBoolValue(serviceAccountManagedByLabelSet)
+	model.CorednsServiceAccountLabelAmazonManagedRemoved = basetypes.NewBoolValue(serviceAccountAmazonManagedLabelRemoved)
+
+	configMapHelmReleaseNameAnnotationSet, configMapHelmReleaseNamespaceAnnotationSet, configMapManagedByLabelSet, configMapAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking CoreDns config map to Helm",
+			fmt.Sprintf("Error checking CoreDns config map to Helm: %s", err),
+		)
+		return
+	}
+
+	model.CorednsConfigMapLabelHelmReleaseNameSet = basetypes.NewBoolValue(configMapHelmReleaseNameAnnotationSet)
+	model.CorednsConfigMapLabelHelmReleaseNamespaceSet = basetypes.NewBoolValue(configMapHelmReleaseNamespaceAnnotationSet)
+	model.CorednsConfigMapLabelManagedBySet = basetypes.NewBoolValue(configMapManagedByLabelSet)
+	model.CorednsConfigMapLabelAmazonManagedRemoved = basetypes.NewBoolValue(configMapAmazonManagedLabelRemoved)
+
+	podDistruptionBudgetHelmReleaseNameAnnotationSet, podDistruptionBudgetHelmReleaseNamespaceAnnotationSet, podDistruptionBudgetManagedByLabelSet, podDistruptionBudgetAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking CoreDns pod disruption budget to Helm",
+			fmt.Sprintf("Error checking CoreDns pod disruption budget to Helm: %s", err),
+		)
+		return
+	}
+
+	model.CorednsPodDistruptionBudgetLabelHelmReleaseNameSet = basetypes.NewBoolValue(podDistruptionBudgetHelmReleaseNameAnnotationSet)
+	model.CorednsPodDistruptionBudgetLabelHelmReleaseNamespaceSet = basetypes.NewBoolValue(podDistruptionBudgetHelmReleaseNamespaceAnnotationSet)
+	model.CorednsPodDistruptionBudgetLabelManagedBySet = basetypes.NewBoolValue(podDistruptionBudgetManagedByLabelSet)
+	model.CorednsPodDistruptionBudgetLabelAmazonManagedRemoved = basetypes.NewBoolValue(podDistruptionBudgetAmazonManagedLabelRemoved)
 
 	// Finally, set the state
 	tflog.Debug(ctx, "Storing job info into the state")
@@ -451,6 +637,33 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 				)
 				return
 			}
+
+			err = ImportServiceAccountIntoHelm(ctx, clientset, "kube-system", "coredns")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error importing CoreDns service account to Helm",
+					fmt.Sprintf("Error importing CoreDns service account to Helm: %s", err),
+				)
+				return
+			}
+
+			err = ImportConfigMapAccountIntoHelm(ctx, clientset, "kube-system", "coredns")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error importing CoreDns config map to Helm",
+					fmt.Sprintf("Error importing CoreDns config map to Helm: %s", err),
+				)
+				return
+			}
+
+			err = ImportPodDisruptionBudgetIntoHelm(ctx, clientset, "kube-system", "coredns")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error importing CoreDns pod disruption budget to Helm",
+					fmt.Sprintf("Error importing CoreDns pod disruption budget to Helm: %s", err),
+				)
+				return
+			}
 		}
 	}
 
@@ -502,6 +715,48 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	model.CorednsServiceLabelHelmReleaseNamespaceSet = basetypes.NewBoolValue(serviceHelmReleaseNamespaceAnnotationSet)
 	model.CorednsServiceLabelManagedBySet = basetypes.NewBoolValue(serviceManagedByLabelSet)
 	model.CorednsServiceLabelAmazonManagedRemoved = basetypes.NewBoolValue(serviceAmazonManagedLabelRemoved)
+
+	serviceAccountHelmReleaseNameAnnotationSet, serviceAccountHelmReleaseNamespaceAnnotationSet, serviceAccountManagedByLabelSet, serviceAccountAmazonManagedLabelRemoved, err := ServiceAccountImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking CoreDns service account to Helm",
+			fmt.Sprintf("Error checking CoreDns service account to Helm: %s", err),
+		)
+		return
+	}
+
+	model.CorednsServiceAccountLabelHelmReleaseNameSet = basetypes.NewBoolValue(serviceAccountHelmReleaseNameAnnotationSet)
+	model.CorednsServiceAccountLabelHelmReleaseNamespaceSet = basetypes.NewBoolValue(serviceAccountHelmReleaseNamespaceAnnotationSet)
+	model.CorednsServiceAccountLabelManagedBySet = basetypes.NewBoolValue(serviceAccountManagedByLabelSet)
+	model.CorednsServiceAccountLabelAmazonManagedRemoved = basetypes.NewBoolValue(serviceAccountAmazonManagedLabelRemoved)
+
+	configMapHelmReleaseNameAnnotationSet, configMapHelmReleaseNamespaceAnnotationSet, configMapManagedByLabelSet, configMapAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking CoreDns config map to Helm",
+			fmt.Sprintf("Error checking CoreDns config map to Helm: %s", err),
+		)
+		return
+	}
+
+	model.CorednsConfigMapLabelHelmReleaseNameSet = basetypes.NewBoolValue(configMapHelmReleaseNameAnnotationSet)
+	model.CorednsConfigMapLabelHelmReleaseNamespaceSet = basetypes.NewBoolValue(configMapHelmReleaseNamespaceAnnotationSet)
+	model.CorednsConfigMapLabelManagedBySet = basetypes.NewBoolValue(configMapManagedByLabelSet)
+	model.CorednsConfigMapLabelAmazonManagedRemoved = basetypes.NewBoolValue(configMapAmazonManagedLabelRemoved)
+
+	podDistruptionBudgetHelmReleaseNameAnnotationSet, podDistruptionBudgetHelmReleaseNamespaceAnnotationSet, podDistruptionBudgetManagedByLabelSet, podDistruptionBudgetAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking CoreDns pod disruption budget to Helm",
+			fmt.Sprintf("Error checking CoreDns pod disruption budget to Helm: %s", err),
+		)
+		return
+	}
+
+	model.CorednsPodDistruptionBudgetLabelHelmReleaseNameSet = basetypes.NewBoolValue(podDistruptionBudgetHelmReleaseNameAnnotationSet)
+	model.CorednsPodDistruptionBudgetLabelHelmReleaseNamespaceSet = basetypes.NewBoolValue(podDistruptionBudgetHelmReleaseNamespaceAnnotationSet)
+	model.CorednsPodDistruptionBudgetLabelManagedBySet = basetypes.NewBoolValue(podDistruptionBudgetManagedByLabelSet)
+	model.CorednsPodDistruptionBudgetLabelAmazonManagedRemoved = basetypes.NewBoolValue(podDistruptionBudgetAmazonManagedLabelRemoved)
 
 	// Finally, set the state
 	tflog.Debug(ctx, "Storing job info into the state")
