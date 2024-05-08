@@ -2,7 +2,7 @@ package provider
 
 import (
 	"context"
-
+	"github.com/hashicorp/terraform-plugin-framework-validators/boolvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -100,7 +100,10 @@ func (p *CleanEksProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 				Description:         "Whether server should be accessed without verifying the TLS certificate. Can be set with KUBE_INSECURE environment variable.",
 				Optional:            true,
 				Computed:            true,
-				Default:             EnvDefaultBool("KUBE_INSECURE", false),
+				Validators: []validator.Bool{
+					boolvalidator.ConflictsWith(path.MatchRoot("cluster_ca_certificate")),
+				},
+				Default: EnvDefaultBool("KUBE_INSECURE", false),
 			},
 
 			"tls_server_name": resourceSchema.StringAttribute{
@@ -194,7 +197,7 @@ func (p *CleanEksProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 				Computed:            true,
 				Sensitive:           true,
 				Validators: []validator.String{
-					stringvalidator.ConflictsWith(path.MatchRoot("client_cert_pem")),
+					stringvalidator.ConflictsWith(path.MatchRoot("client_certificate")),
 				},
 				Default: EnvDefaultString("KUBE_TOKEN", ""),
 			},
