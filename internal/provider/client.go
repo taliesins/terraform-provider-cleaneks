@@ -106,8 +106,12 @@ func DeploymentImportedIntoHelm(ctx context.Context, clientset *kubernetes.Clien
 		return false, false, false, false, err
 	}
 
-	if deployment.Labels == nil || deployment.Annotations == nil {
-		return false, false, false, false, err
+	if deployment.Labels == nil {
+		deployment.Labels = map[string]string{}
+	}
+
+	if deployment.Annotations == nil {
+		deployment.Annotations = map[string]string{}
 	}
 
 	value, ok := deployment.Annotations[helmReleaseNameAnnotationName]
@@ -144,8 +148,12 @@ func ServiceImportedIntoHelm(ctx context.Context, clientset *kubernetes.Clientse
 		return false, false, false, false, err
 	}
 
-	if service.Labels == nil || service.Annotations == nil {
-		return false, false, false, false, err
+	if service.Labels == nil {
+		service.Labels = map[string]string{}
+	}
+
+	if service.Annotations == nil {
+		service.Annotations = map[string]string{}
 	}
 
 	value, ok := service.Annotations[helmReleaseNameAnnotationName]
@@ -182,8 +190,12 @@ func ServiceAccountImportedIntoHelm(ctx context.Context, clientset *kubernetes.C
 		return false, false, false, false, err
 	}
 
-	if serviceAccount.Labels == nil || serviceAccount.Annotations == nil {
-		return false, false, false, false, err
+	if serviceAccount.Labels == nil {
+		serviceAccount.Labels = map[string]string{}
+	}
+
+	if serviceAccount.Annotations == nil {
+		serviceAccount.Annotations = map[string]string{}
 	}
 
 	value, ok := serviceAccount.Annotations[helmReleaseNameAnnotationName]
@@ -220,8 +232,12 @@ func PodDisruptionBudgetImportedIntoHelm(ctx context.Context, clientset *kuberne
 		return false, false, false, false, err
 	}
 
-	if podDisruptionBudget.Labels == nil || podDisruptionBudget.Annotations == nil {
-		return false, false, false, false, err
+	if podDisruptionBudget.Labels == nil {
+		podDisruptionBudget.Labels = map[string]string{}
+	}
+
+	if podDisruptionBudget.Annotations == nil {
+		podDisruptionBudget.Annotations = map[string]string{}
 	}
 
 	value, ok := podDisruptionBudget.Annotations[helmReleaseNameAnnotationName]
@@ -258,8 +274,12 @@ func ConfigMapImportedIntoHelm(ctx context.Context, clientset *kubernetes.Client
 		return false, false, false, false, err
 	}
 
-	if configMap.Labels == nil || configMap.Annotations == nil {
-		return false, false, false, false, err
+	if configMap.Labels == nil {
+		configMap.Labels = map[string]string{}
+	}
+
+	if configMap.Annotations == nil {
+		configMap.Annotations = map[string]string{}
 	}
 
 	value, ok := configMap.Annotations[helmReleaseNameAnnotationName]
@@ -277,7 +297,7 @@ func ConfigMapImportedIntoHelm(ctx context.Context, clientset *kubernetes.Client
 		managedByLabelSet = true
 	}
 
-	_, ok = configMap.Annotations[amazonManagedLabelName]
+	_, ok = configMap.Labels[amazonManagedLabelName]
 	if !ok {
 		amazonManagedLabelRemoved = true
 	}
@@ -290,8 +310,8 @@ func ImportDeploymentIntoHelm(ctx context.Context, clientset *kubernetes.Clients
 		updated := false
 		value := ""
 
-		if deployment.Labels == nil {
-			deployment.Labels = make(map[string]string)
+		if deployment.Annotations == nil {
+			deployment.Annotations = make(map[string]string)
 		}
 
 		value, ok := deployment.Annotations[helmReleaseNameAnnotationName]
@@ -306,8 +326,8 @@ func ImportDeploymentIntoHelm(ctx context.Context, clientset *kubernetes.Clients
 			deployment.Annotations[helmReleaseNamespaceAnnotationName] = helmReleaseNamespaceAnnotationValue
 		}
 
-		if deployment.Annotations == nil {
-			deployment.Annotations = make(map[string]string)
+		if deployment.Labels == nil {
+			deployment.Labels = make(map[string]string)
 		}
 
 		value, ok = deployment.Labels[managedByLabelName]
@@ -316,17 +336,21 @@ func ImportDeploymentIntoHelm(ctx context.Context, clientset *kubernetes.Clients
 			deployment.Labels[managedByLabelName] = managedByLabelValue
 		}
 
-		_, ok = deployment.Annotations[amazonManagedLabelName]
+		_, ok = deployment.Labels[amazonManagedLabelName]
 		if ok {
 			updated = true
 			delete(deployment.Labels, amazonManagedLabelName)
 		}
 
+		if deployment.Spec.Template.ObjectMeta.Labels == nil {
+			deployment.Spec.Template.ObjectMeta.Labels = make(map[string]string)
+		}
+
 		// Update template spec so that pods will get the correct labels
-		_, ok = deployment.Spec.Template.ObjectMeta.Annotations[amazonManagedLabelName]
+		_, ok = deployment.Spec.Template.ObjectMeta.Labels[amazonManagedLabelName]
 		if ok {
 			updated = true
-			delete(deployment.Spec.Template.ObjectMeta.Annotations, amazonManagedLabelName)
+			delete(deployment.Spec.Template.ObjectMeta.Labels, amazonManagedLabelName)
 		}
 
 		return updated, deployment
@@ -354,8 +378,8 @@ func ImportServiceIntoHelm(ctx context.Context, clientset *kubernetes.Clientset,
 		updated := false
 		value := ""
 
-		if service.Labels == nil {
-			service.Labels = make(map[string]string)
+		if service.Annotations == nil {
+			service.Annotations = make(map[string]string)
 		}
 
 		value, ok := service.Annotations[helmReleaseNameAnnotationName]
@@ -370,8 +394,8 @@ func ImportServiceIntoHelm(ctx context.Context, clientset *kubernetes.Clientset,
 			service.Annotations[helmReleaseNamespaceAnnotationName] = helmReleaseNamespaceAnnotationValue
 		}
 
-		if service.Annotations == nil {
-			service.Annotations = make(map[string]string)
+		if service.Labels == nil {
+			service.Labels = make(map[string]string)
 		}
 
 		value, ok = service.Labels[managedByLabelName]
@@ -380,7 +404,7 @@ func ImportServiceIntoHelm(ctx context.Context, clientset *kubernetes.Clientset,
 			service.Labels[managedByLabelName] = managedByLabelValue
 		}
 
-		_, ok = service.Annotations[amazonManagedLabelName]
+		_, ok = service.Labels[amazonManagedLabelName]
 		if ok {
 			updated = true
 			delete(service.Labels, amazonManagedLabelName)
@@ -411,8 +435,8 @@ func ImportServiceAccountIntoHelm(ctx context.Context, clientset *kubernetes.Cli
 		updated := false
 		value := ""
 
-		if serviceAccount.Labels == nil {
-			serviceAccount.Labels = make(map[string]string)
+		if serviceAccount.Annotations == nil {
+			serviceAccount.Annotations = make(map[string]string)
 		}
 
 		value, ok := serviceAccount.Annotations[helmReleaseNameAnnotationName]
@@ -427,8 +451,8 @@ func ImportServiceAccountIntoHelm(ctx context.Context, clientset *kubernetes.Cli
 			serviceAccount.Annotations[helmReleaseNamespaceAnnotationName] = helmReleaseNamespaceAnnotationValue
 		}
 
-		if serviceAccount.Annotations == nil {
-			serviceAccount.Annotations = make(map[string]string)
+		if serviceAccount.Labels == nil {
+			serviceAccount.Labels = make(map[string]string)
 		}
 
 		value, ok = serviceAccount.Labels[managedByLabelName]
@@ -437,7 +461,7 @@ func ImportServiceAccountIntoHelm(ctx context.Context, clientset *kubernetes.Cli
 			serviceAccount.Labels[managedByLabelName] = managedByLabelValue
 		}
 
-		_, ok = serviceAccount.Annotations[amazonManagedLabelName]
+		_, ok = serviceAccount.Labels[amazonManagedLabelName]
 		if ok {
 			updated = true
 			delete(serviceAccount.Labels, amazonManagedLabelName)
@@ -468,8 +492,8 @@ func ImportPodDisruptionBudgetIntoHelm(ctx context.Context, clientset *kubernete
 		updated := false
 		value := ""
 
-		if serviceAccount.Labels == nil {
-			serviceAccount.Labels = make(map[string]string)
+		if serviceAccount.Annotations == nil {
+			serviceAccount.Annotations = make(map[string]string)
 		}
 
 		value, ok := serviceAccount.Annotations[helmReleaseNameAnnotationName]
@@ -484,8 +508,8 @@ func ImportPodDisruptionBudgetIntoHelm(ctx context.Context, clientset *kubernete
 			serviceAccount.Annotations[helmReleaseNamespaceAnnotationName] = helmReleaseNamespaceAnnotationValue
 		}
 
-		if serviceAccount.Annotations == nil {
-			serviceAccount.Annotations = make(map[string]string)
+		if serviceAccount.Labels == nil {
+			serviceAccount.Labels = make(map[string]string)
 		}
 
 		value, ok = serviceAccount.Labels[managedByLabelName]
@@ -494,7 +518,7 @@ func ImportPodDisruptionBudgetIntoHelm(ctx context.Context, clientset *kubernete
 			serviceAccount.Labels[managedByLabelName] = managedByLabelValue
 		}
 
-		_, ok = serviceAccount.Annotations[amazonManagedLabelName]
+		_, ok = serviceAccount.Labels[amazonManagedLabelName]
 		if ok {
 			updated = true
 			delete(serviceAccount.Labels, amazonManagedLabelName)
@@ -525,8 +549,8 @@ func ImportConfigMapAccountIntoHelm(ctx context.Context, clientset *kubernetes.C
 		updated := false
 		value := ""
 
-		if configMap.Labels == nil {
-			configMap.Labels = make(map[string]string)
+		if configMap.Annotations == nil {
+			configMap.Annotations = make(map[string]string)
 		}
 
 		value, ok := configMap.Annotations[helmReleaseNameAnnotationName]
@@ -541,8 +565,8 @@ func ImportConfigMapAccountIntoHelm(ctx context.Context, clientset *kubernetes.C
 			configMap.Annotations[helmReleaseNamespaceAnnotationName] = helmReleaseNamespaceAnnotationValue
 		}
 
-		if configMap.Annotations == nil {
-			configMap.Annotations = make(map[string]string)
+		if configMap.Labels == nil {
+			configMap.Labels = make(map[string]string)
 		}
 
 		value, ok = configMap.Labels[managedByLabelName]
@@ -551,7 +575,7 @@ func ImportConfigMapAccountIntoHelm(ctx context.Context, clientset *kubernetes.C
 			configMap.Labels[managedByLabelName] = managedByLabelValue
 		}
 
-		_, ok = configMap.Annotations[amazonManagedLabelName]
+		_, ok = configMap.Labels[amazonManagedLabelName]
 		if ok {
 			updated = true
 			delete(configMap.Labels, amazonManagedLabelName)
