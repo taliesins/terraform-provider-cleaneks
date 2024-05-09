@@ -43,7 +43,7 @@ func (p *CleanEksProvider) Configure(ctx context.Context, req provider.Configure
 	restConfig, err := newKubernetesClientConfig(ctx, model)
 	if err != nil {
 		// We don't want to throw error here as we EKS cluster might not exist yet
-		resp.Diagnostics.Append(diag.NewErrorDiagnostic("failed to initilize Kubernetes client configuration", err.Error()))
+		resp.Diagnostics.Append(diag.NewWarningDiagnostic("failed to initialize Kubernetes client configuration, this could be because credentials are not available during provider initialization", err.Error()))
 	} else {
 		clientSet, err = kubernetes.NewForConfig(restConfig)
 		if err != nil {
