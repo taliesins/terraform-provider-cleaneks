@@ -32,9 +32,11 @@ type JobResource struct {
 type JobResourceModel struct {
 	ID types.String `tfsdk:"id"`
 
-	RemoveAwsCni             types.Bool `tfsdk:"remove_aws_cni"`
-	RemoveKubeProxy          types.Bool `tfsdk:"remove_kube_proxy"`
-	ImportCorednsToHelm      types.Bool `tfsdk:"import_coredns_to_helm"`
+	RemoveAwsCni        types.Bool `tfsdk:"remove_aws_cni"`
+	RemoveKubeProxy     types.Bool `tfsdk:"remove_kube_proxy"`
+	RemoveCoreDns       types.Bool `tfsdk:"remove_core_dns"`
+	ImportCorednsToHelm types.Bool `tfsdk:"import_coredns_to_helm"`
+
 	AwsCniDaemonsetExists    types.Bool `tfsdk:"aws_cni_daemonset_exists"`
 	KubeProxyDaemonsetExists types.Bool `tfsdk:"kube_proxy_daemonset_exists"`
 
@@ -98,11 +100,19 @@ func (r *JobResource) Schema(_ context.Context, req resource.SchemaRequest, resp
 				Default:             booldefault.StaticBool(true),
 			},
 
+			"remove_core_dns": schema.BoolAttribute{
+				MarkdownDescription: "Remove **CoreDNS** from EKS cluster",
+				Description:         "Remove CoreDNS from EKS cluster",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(true),
+			},
+
 			"import_coredns_to_helm": schema.BoolAttribute{
 				Description: "Add helm attributes to CoreDns service and deployment, so that it can be managed by Helm.",
 				Optional:    true,
 				Computed:    true,
-				Default:     booldefault.StaticBool(true),
+				Default:     booldefault.StaticBool(false),
 			},
 
 			"aws_cni_daemonset_exists": schema.BoolAttribute{
@@ -288,12 +298,17 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		removeKubeProxy = model.RemoveKubeProxy.ValueBool()
 	}
 
-	importCorednsToHelm := true
+	removeCoreDns := true
+	if !(model.RemoveCoreDns.IsNull() || model.RemoveCoreDns.IsUnknown()) {
+		removeCoreDns = model.RemoveCoreDns.ValueBool()
+	}
+
+	importCorednsToHelm := false
 	if !(model.ImportCorednsToHelm.IsNull() || model.ImportCorednsToHelm.IsUnknown()) {
 		importCorednsToHelm = model.ImportCorednsToHelm.ValueBool()
 	}
 
-	if removeAwsCni || removeKubeProxy || importCorednsToHelm {
+	if removeAwsCni || removeKubeProxy || removeCoreDns || importCorednsToHelm {
 		if removeAwsCni {
 			_, err = DeleteDaemonset(ctx, clientset, "kube-system", "aws-node")
 			if err != nil {
@@ -316,7 +331,18 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 			}
 		}
 
-		if importCorednsToHelm {
+		if removeCoreDns {
+			_, err = DeleteDaemonset(ctx, clientset, "kube-system", "coredns")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error removing CoreDNS",
+					fmt.Sprintf("Error removing CoreDNS: %s", err),
+				)
+				return
+			}
+		}
+
+		if !removeCoreDns && importCorednsToHelm {
 			err = ImportDeploymentIntoHelm(ctx, clientset, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
@@ -607,7 +633,12 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		removeKubeProxy = model.RemoveKubeProxy.ValueBool()
 	}
 
-	importCorednsToHelm := true
+	removeCoreDns := true
+	if !(model.RemoveCoreDns.IsNull() || model.RemoveCoreDns.IsUnknown()) {
+		removeCoreDns = model.RemoveCoreDns.ValueBool()
+	}
+
+	importCorednsToHelm := false
 	if !(model.ImportCorednsToHelm.IsNull() || model.ImportCorednsToHelm.IsUnknown()) {
 		importCorednsToHelm = model.ImportCorednsToHelm.ValueBool()
 	}
@@ -643,7 +674,18 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 			}
 		}
 
-		if importCorednsToHelm {
+		if removeCoreDns {
+			_, err = DeleteDaemonset(ctx, clientset, "kube-system", "coredns")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error removing CoreDNS",
+					fmt.Sprintf("Error removing CoreDNS: %s", err),
+				)
+				return
+			}
+		}
+
+		if !removeCoreDns && importCorednsToHelm {
 			err = ImportDeploymentIntoHelm(ctx, clientset, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
