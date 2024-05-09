@@ -75,4 +75,5 @@ data "aws_eks_cluster_auth" "cluster" {
 - `coredns_service_label_helm_release_namespace_set` (Boolean) Does CoreDNS service have label **meta.helm.sh/release-namespace** with value of **kube-system**. Returns **true** if service does not exist as Helm chart can be deployed.
 - `coredns_service_label_managed_by_set` (Boolean) Does CoreDNS service have label **app.kubernetes.io/managed-by** with value of **Helm**. Returns **true** if service does not exist as Helm chart can be deployed.
 - `id` (String) ID of the job. This is the same values as the endpoint.
+- `kube_proxy_config_map_exists` (Boolean) Does **Kube-Proxy** config map exist.
 - `kube_proxy_daemonset_exists` (Boolean) Does **Kube-Proxy** daemonset exist.

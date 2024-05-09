@@ -181,7 +181,7 @@ func newKubernetesClientConfig(ctx context.Context, data CleanEksProviderModel) 
 		tflog.Warn(ctx, "Invalid provider configuration was supplied. Provider operations likely to fail", map[string]interface{}{
 			"error": err.Error(),
 		})
-		return nil, nil
+		return nil, err
 	}
 	return cfg, nil
 }

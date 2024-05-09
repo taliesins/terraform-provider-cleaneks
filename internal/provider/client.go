@@ -95,6 +95,30 @@ func DeleteService(ctx context.Context, clientset *kubernetes.Clientset, namespa
 	}
 }
 
+func DeleteConfigMap(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
+	err = clientset.CoreV1().ConfigMaps(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	switch {
+	case err != nil && !errors.IsNotFound(err):
+		return false, err
+	case errors.IsNotFound(err):
+		return false, nil
+	default:
+		return true, nil
+	}
+}
+
+func ConfigMapExist(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
+	_, err = clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
+	switch {
+	case err != nil && !errors.IsNotFound(err):
+		return false, err
+	case errors.IsNotFound(err):
+		return false, nil
+	default:
+		return true, nil
+	}
+}
+
 func DeploymentExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
 	deployment, err := clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	switch {

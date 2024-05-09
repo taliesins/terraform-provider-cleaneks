@@ -39,6 +39,7 @@ type JobResourceModel struct {
 
 	AwsCniDaemonsetExists    types.Bool `tfsdk:"aws_cni_daemonset_exists"`
 	KubeProxyDaemonsetExists types.Bool `tfsdk:"kube_proxy_daemonset_exists"`
+	KubeProxyConfigMapExists types.Bool `tfsdk:"kube_proxy_config_map_exists"`
 
 	CorednsDeploymentLabelHelmReleaseNameSet      types.Bool `tfsdk:"coredns_deployment_label_helm_release_name_set"`
 	CorednsDeploymentLabelHelmReleaseNamespaceSet types.Bool `tfsdk:"coredns_deployment_label_helm_release_namespace_set"`
@@ -124,6 +125,12 @@ func (r *JobResource) Schema(_ context.Context, req resource.SchemaRequest, resp
 			"kube_proxy_daemonset_exists": schema.BoolAttribute{
 				MarkdownDescription: "Does **Kube-Proxy** daemonset exist.",
 				Description:         "Does Kube-Proxy daemonset exist.",
+				Computed:            true,
+			},
+
+			"kube_proxy_config_map_exists": schema.BoolAttribute{
+				MarkdownDescription: "Does **Kube-Proxy** config map exist.",
+				Description:         "Does Kube-Proxy config map exist.",
 				Computed:            true,
 			},
 
@@ -313,8 +320,8 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 			_, err = DeleteDaemonset(ctx, clientset, "kube-system", "aws-node")
 			if err != nil {
 				res.Diagnostics.AddError(
-					"Error removing AWS CNI",
-					fmt.Sprintf("Error removing AWS CNI: %s", err),
+					"Error removing AWS CNI daemonset",
+					fmt.Sprintf("Error removing AWS CNI daemonset: %s", err),
 				)
 				return
 			}
@@ -324,8 +331,17 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 			_, err = DeleteDaemonset(ctx, clientset, "kube-system", "kube-proxy")
 			if err != nil {
 				res.Diagnostics.AddError(
-					"Error removing Kube Proxy",
-					fmt.Sprintf("Error removing Kube Proxy: %s", err),
+					"Error removing Kube Proxy daemonset",
+					fmt.Sprintf("Error removing Kube Proxy daemonset: %s", err),
+				)
+				return
+			}
+
+			_, err = DeleteConfigMap(ctx, clientset, "kube-system", "kube-proxy")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error removing Kube Proxy config map",
+					fmt.Sprintf("Error removing Kube Proxy config map: %s", err),
 				)
 				return
 			}
@@ -335,8 +351,8 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 			_, err = DeleteDeployment(ctx, clientset, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
-					"Error removing CoreDNS",
-					fmt.Sprintf("Error removing CoreDNS: %s", err),
+					"Error removing CoreDNS deployment",
+					fmt.Sprintf("Error removing CoreDNS deployment: %s", err),
 				)
 				return
 			}
@@ -410,6 +426,16 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 	model.KubeProxyDaemonsetExists = basetypes.NewBoolValue(kubeProxyDaemonsetExists)
+
+	kubeProxyConfigMapExists, err := ConfigMapExist(ctx, clientset, "kube-system", "kube-proxy")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for Kube Proxy config map",
+			fmt.Sprintf("Error checking for Kube Proxy config map: %s", err),
+		)
+		return
+	}
+	model.KubeProxyConfigMapExists = basetypes.NewBoolValue(kubeProxyConfigMapExists)
 
 	deploymentHelmReleaseNameAnnotationSet, deploymentHelmReleaseNamespaceAnnotationSet, deploymentManagedByLabelSet, deploymentAmazonManagedLabelRemoved, err := DeploymentImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
 	if err != nil {
@@ -515,8 +541,8 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	awsCniDaemonsetExists, err := DaemonsetExist(ctx, clientset, "kube-system", "aws-node")
 	if err != nil {
 		res.Diagnostics.AddError(
-			"Error checking for AWS CNI",
-			fmt.Sprintf("Error checking daemonset for AWS CNI: %s", err),
+			"Error checking for AWS CNI daemonset",
+			fmt.Sprintf("Error checking daemonset for AWS CNI daemonset: %s", err),
 		)
 		return
 	}
@@ -525,12 +551,22 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	kubeProxyDaemonsetExists, err := DaemonsetExist(ctx, clientset, "kube-system", "kube-proxy")
 	if err != nil {
 		res.Diagnostics.AddError(
-			"Error checking for Kube Proxy",
-			fmt.Sprintf("Error checking for Kube Proxy: %s", err),
+			"Error checking for Kube Proxy daemonset",
+			fmt.Sprintf("Error checking for Kube Proxy daemonset: %s", err),
 		)
 		return
 	}
 	model.KubeProxyDaemonsetExists = basetypes.NewBoolValue(kubeProxyDaemonsetExists)
+
+	kubeProxyConfigMapExists, err := ConfigMapExist(ctx, clientset, "kube-system", "kube-proxy")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for Kube Proxy config map",
+			fmt.Sprintf("Error checking for Kube Proxy config map: %s", err),
+		)
+		return
+	}
+	model.KubeProxyConfigMapExists = basetypes.NewBoolValue(kubeProxyConfigMapExists)
 
 	deploymentHelmReleaseNameAnnotationSet, deploymentHelmReleaseNamespaceAnnotationSet, deploymentManagedByLabelSet, deploymentAmazonManagedLabelRemoved, err := DeploymentImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
 	if err != nil {
@@ -656,8 +692,8 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 			_, err = DeleteDaemonset(ctx, clientset, "kube-system", "aws-node")
 			if err != nil {
 				res.Diagnostics.AddError(
-					"Error removing AWS CNI",
-					fmt.Sprintf("Error removing AWS CNI: %s", err),
+					"Error removing AWS CNI daemonset",
+					fmt.Sprintf("Error removing AWS CNI daemonset: %s", err),
 				)
 				return
 			}
@@ -667,8 +703,17 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 			_, err = DeleteDaemonset(ctx, clientset, "kube-system", "kube-proxy")
 			if err != nil {
 				res.Diagnostics.AddError(
-					"Error removing Kube Proxy",
-					fmt.Sprintf("Error removing Kube Proxy: %s", err),
+					"Error removing Kube Proxy daemonset",
+					fmt.Sprintf("Error removing Kube Proxy daemonset: %s", err),
+				)
+				return
+			}
+
+			_, err = DeleteConfigMap(ctx, clientset, "kube-system", "kube-proxy")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error removing Kube Proxy config map",
+					fmt.Sprintf("Error removing Kube Proxy config map: %s", err),
 				)
 				return
 			}
@@ -689,8 +734,8 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 				_, err = DeleteDeployment(ctx, clientset, "kube-system", "coredns")
 				if err != nil {
 					res.Diagnostics.AddError(
-						"Error removing CoreDNS",
-						fmt.Sprintf("Error removing CoreDNS: %s", err),
+						"Error removing CoreDNS deployment",
+						fmt.Sprintf("Error removing CoreDNS deployment: %s", err),
 					)
 					return
 				}
@@ -766,6 +811,16 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 	model.KubeProxyDaemonsetExists = basetypes.NewBoolValue(kubeProxyDaemonsetExists)
+
+	kubeProxyConfigMapExists, err := ConfigMapExist(ctx, clientset, "kube-system", "kube-proxy")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for Kube Proxy config map",
+			fmt.Sprintf("Error checking for Kube Proxy config map: %s", err),
+		)
+		return
+	}
+	model.KubeProxyConfigMapExists = basetypes.NewBoolValue(kubeProxyConfigMapExists)
 
 	deploymentHelmReleaseNameAnnotationSet, deploymentHelmReleaseNamespaceAnnotationSet, deploymentManagedByLabelSet, deploymentAmazonManagedLabelRemoved, err := DeploymentImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
 	if err != nil {
