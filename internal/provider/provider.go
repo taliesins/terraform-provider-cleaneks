@@ -72,12 +72,10 @@ func (p *CleanEksProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 		MarkdownDescription: "A provider to bootstrap an EKS cluster by removing **AWS CNI** and **Kube-Proxy**. It will also add the required annotations and labels to import `CoreDNS` into Helm. It will also drop managed by AWS labels from CoreDNS deployment and service.",
 		Description:         "A provider to bootstrap an EKS cluster by removing AWS CNI and Kube-Proxy. It will also add the required annotations and labels to CoreDNS so that Helm can manage CoreDNS. It will also drop managed by AWS labels from CoreDNS deployment and service.",
 		Attributes: map[string]providerSchema.Attribute{
-			"host": resourceSchema.StringAttribute{
-				MarkdownDescription: "The hostname (in form of URI) of Kubernetes master. Can be set with `KUBE_HOST` environment variable.",
-				Description:         "The hostname (in form of URI) of Kubernetes master. Can be set with KUBE_HOST environment variable.",
-				Optional:            true,
-				Computed:            true,
-				Default:             EnvDefaultString("KUBE_HOST", ""),
+			"host": providerSchema.StringAttribute{
+				MarkdownDescription: "The hostname (in form of URI) of Kubernetes master.",
+				Description:         "The hostname (in form of URI) of Kubernetes master.",
+				Required:            true,
 			},
 
 			"username": resourceSchema.StringAttribute{
