@@ -1,4 +1,10 @@
 
+<a name="v0.1.7"></a>
+## [v0.1.7](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.6...v0.1.7) (2024-05-09)
+
+### Fix
+- [5762f3c](https://github.com/taliesins/terraform-provider-cleaneks/commit/5762f3cb7147c256f3d03b19a7c27d3a637b4979) If resources does not exist then helm can deploy over it
+
 <a name="v0.1.6"></a>
 ## [v0.1.6](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.5...v0.1.6) (2024-05-09)
 
