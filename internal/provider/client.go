@@ -342,15 +342,31 @@ func ImportDeploymentIntoHelm(ctx context.Context, clientset *kubernetes.Clients
 			delete(deployment.Labels, amazonManagedLabelName)
 		}
 
+		// Create a copy of the existing template
+		_, ok = deployment.Spec.Template.ObjectMeta.Labels[amazonManagedLabelName]
+		if ok {
+			newTemplate := deployment.Spec.Template.DeepCopy()
+			if newTemplate.ObjectMeta.Labels == nil {
+				newTemplate.ObjectMeta.Labels = make(map[string]string)
+			}
+
+			_, ok = newTemplate.ObjectMeta.Labels[amazonManagedLabelName]
+			if ok {
+				updated = true
+				delete(newTemplate.ObjectMeta.Labels, amazonManagedLabelName)
+			}
+
+			deployment.Spec.Template = *newTemplate
+		}
+
 		/*
 			if deployment.Spec.Selector.MatchLabels == nil {
 				deployment.Spec.Selector.MatchLabels = make(map[string]string)
 			}
 
+			// We can only remove the label if it is not part of the selector.MatchLabels. selector.MatchLabels are immutable.
 			_, ok = deployment.Spec.Selector.MatchLabels[amazonManagedLabelName]
 			if !ok {
-				// We can only remove the label if it is not part of the selector
-
 				if deployment.Spec.Template.ObjectMeta.Labels == nil {
 					deployment.Spec.Template.ObjectMeta.Labels = make(map[string]string)
 				}
