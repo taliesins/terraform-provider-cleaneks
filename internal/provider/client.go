@@ -120,7 +120,11 @@ func DeploymentImportedIntoHelm(ctx context.Context, clientset *kubernetes.Clien
 
 	deployment, err := clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return false, false, false, false, err
+		if errors.IsNotFound(err) {
+			return true, true, true, true, nil
+		} else {
+			return false, false, false, false, err
+		}
 	}
 
 	if deployment.Labels == nil {
@@ -162,7 +166,11 @@ func ServiceImportedIntoHelm(ctx context.Context, clientset *kubernetes.Clientse
 
 	service, err := clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return false, false, false, false, err
+		if errors.IsNotFound(err) {
+			return true, true, true, true, nil
+		} else {
+			return false, false, false, false, err
+		}
 	}
 
 	if service.Labels == nil {
@@ -204,7 +212,11 @@ func ServiceAccountImportedIntoHelm(ctx context.Context, clientset *kubernetes.C
 
 	serviceAccount, err := clientset.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return false, false, false, false, err
+		if errors.IsNotFound(err) {
+			return true, true, true, true, nil
+		} else {
+			return false, false, false, false, err
+		}
 	}
 
 	if serviceAccount.Labels == nil {
@@ -246,7 +258,11 @@ func PodDisruptionBudgetImportedIntoHelm(ctx context.Context, clientset *kuberne
 
 	podDisruptionBudget, err := clientset.PolicyV1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return false, false, false, false, err
+		if errors.IsNotFound(err) {
+			return true, true, true, true, nil
+		} else {
+			return false, false, false, false, err
+		}
 	}
 
 	if podDisruptionBudget.Labels == nil {
@@ -288,7 +304,11 @@ func ConfigMapImportedIntoHelm(ctx context.Context, clientset *kubernetes.Client
 
 	configMap, err := clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return false, false, false, false, err
+		if errors.IsNotFound(err) {
+			return true, true, true, true, nil
+		} else {
+			return false, false, false, false, err
+		}
 	}
 
 	if configMap.Labels == nil {
