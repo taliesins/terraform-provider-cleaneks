@@ -1,4 +1,7 @@
 
+<a name="v0.1.8"></a>
+## [v0.1.8](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.7...v0.1.8) (2024-05-09)
+
 <a name="v0.1.7"></a>
 ## [v0.1.7](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.6...v0.1.7) (2024-05-09)
 
