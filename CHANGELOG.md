@@ -1,4 +1,10 @@
 
+<a name="v0.1.6"></a>
+## [v0.1.6](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.5...v0.1.6) (2024-05-09)
+
+### Fix
+- [0a21884](https://github.com/taliesins/terraform-provider-cleaneks/commit/0a2188497ca53eb741fabcedb86688220a357b79) delete the AWS CoreDNS deployment
+
 <a name="v0.1.5"></a>
 ## [v0.1.5](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.4...v0.1.5) (2024-05-09)
 
