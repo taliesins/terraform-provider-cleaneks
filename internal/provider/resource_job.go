@@ -264,7 +264,6 @@ func (r *JobResource) Configure(ctx context.Context, req resource.ConfigureReque
 	}
 
 	cleanEksProviderResourceData, ok := req.ProviderData.(*CleanEksProvider)
-
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
@@ -274,7 +273,16 @@ func (r *JobResource) Configure(ctx context.Context, req resource.ConfigureReque
 		return
 	}
 
-	r.clientset = cleanEksProviderResourceData.ClientSet
+	clientSet, err := cleanEksProviderResourceData.GetClientSet(ctx)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error getting Kubernetes client",
+			fmt.Sprintf("Error getting Kubernetes client: %s", err),
+		)
+		return
+	}
+
+	r.clientset = clientSet
 	r.host = cleanEksProviderResourceData.Host
 }
 

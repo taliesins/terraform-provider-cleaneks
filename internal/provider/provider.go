@@ -33,7 +33,8 @@ type CleanEksProvider struct {
 	// testing.
 	Version string
 
-	ClientSet *kubernetes.Clientset
+	clientSet *kubernetes.Clientset
+	model     CleanEksProviderModel
 }
 
 type CleanEksProviderModel struct {
@@ -278,6 +279,20 @@ func New(version string) func() provider.Provider {
 	}
 }
 
-func (p *CleanEksProvider) resetConfig() {
+func (p *CleanEksProvider) GetClientSet(ctx context.Context) (*kubernetes.Clientset, error) {
+	if p.clientSet != nil {
+		return p.clientSet, nil
+	}
 
+	var clientSet *kubernetes.Clientset
+	restConfig, err := newKubernetesClientConfig(ctx, p.model)
+	if err != nil {
+		return nil, err
+	} else {
+		clientSet, err = kubernetes.NewForConfig(restConfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return clientSet, nil
 }

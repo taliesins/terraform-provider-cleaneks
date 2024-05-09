@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -20,7 +21,6 @@ import (
 
 func (p *CleanEksProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	tflog.Debug(ctx, "Configuring provider")
-	p.resetConfig()
 
 	// Load configuration into the model
 	var model CleanEksProviderModel
@@ -39,29 +39,28 @@ func (p *CleanEksProvider) Configure(ctx context.Context, req provider.Configure
 		burstLimit = model.BurstLimit.ValueInt64()
 	}
 
+	var clientSet *kubernetes.Clientset
 	restConfig, err := newKubernetesClientConfig(ctx, model)
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to get KubeConfig",
-			fmt.Sprintf("Unable to get KubeConfig: %s", err),
-		)
-		return
-	}
-
-	clientSet, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error creating Kubernetes client",
-			fmt.Sprintf("Error creating Kubernetes client: %s", err),
-		)
-		return
+		// We don't want to throw error here as we EKS cluster might not exist yet
+		resp.Diagnostics.Append(diag.NewErrorDiagnostic("failed to initilize Kubernetes client configuration", err.Error()))
+	} else {
+		clientSet, err = kubernetes.NewForConfig(restConfig)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Error creating Kubernetes client",
+				fmt.Sprintf("Error creating Kubernetes client: %s", err),
+			)
+			return
+		}
 	}
 
 	////////////////////////////////////////////////
+	p.model = model
+	p.clientSet = clientSet
 
 	p.Host = host
 	p.BurstLimit = burstLimit
-	p.ClientSet = clientSet
 
 	// Since the provider instance is being passed, ensure these response
 	// values are always set before early returns, etc.
