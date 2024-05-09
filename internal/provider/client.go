@@ -95,6 +95,23 @@ func DeleteService(ctx context.Context, clientset *kubernetes.Clientset, namespa
 	}
 }
 
+func DeploymentExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
+	deployment, err := clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+	switch {
+	case err != nil && !errors.IsNotFound(err):
+		return false, err
+	case errors.IsNotFound(err):
+		return false, nil
+	default:
+		if deployment.Labels == nil {
+			return false, nil
+		}
+
+		_, ok := deployment.Annotations[amazonManagedLabelName]
+		return ok, nil
+	}
+}
+
 func DeploymentImportedIntoHelm(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (helmReleaseNameAnnotationSet bool, helmReleaseNamespaceAnnotationSet bool, managedByLabelSet bool, amazonManagedLabelRemoved bool, err error) {
 	helmReleaseNameAnnotationSet = false
 	helmReleaseNamespaceAnnotationSet = false
