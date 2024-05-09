@@ -332,7 +332,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		}
 
 		if removeCoreDns {
-			_, err = DeleteDaemonset(ctx, clientset, "kube-system", "coredns")
+			_, err = DeleteDeployment(ctx, clientset, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error removing CoreDNS",
@@ -675,13 +675,25 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		}
 
 		if removeCoreDns {
-			_, err = DeleteDaemonset(ctx, clientset, "kube-system", "coredns")
+			// We only want to delete the Amazon CoreDNS and not any further deployed versions
+			exists, err := DeploymentExistsAndIsAwsOne(ctx, clientset, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error removing CoreDNS",
 					fmt.Sprintf("Error removing CoreDNS: %s", err),
 				)
 				return
+			}
+
+			if exists {
+				_, err = DeleteDeployment(ctx, clientset, "kube-system", "coredns")
+				if err != nil {
+					res.Diagnostics.AddError(
+						"Error removing CoreDNS",
+						fmt.Sprintf("Error removing CoreDNS: %s", err),
+					)
+					return
+				}
 			}
 		}
 
