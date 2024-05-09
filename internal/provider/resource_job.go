@@ -8,8 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -78,11 +76,8 @@ func (r *JobResource) Schema(_ context.Context, req resource.SchemaRequest, resp
 			"can manage CoreDNS using a Helm chart.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Description: `ID of the job. This is the same values as the endpoint.`,
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				Description: `ID of the job.`,
+				Required:    true,
 			},
 
 			"remove_aws_cni": schema.BoolAttribute{
