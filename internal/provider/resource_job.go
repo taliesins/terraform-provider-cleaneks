@@ -75,7 +75,7 @@ func (r *JobResource) Schema(_ context.Context, req resource.SchemaRequest, resp
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: `ID of the job.`,
-				Required:    true,
+				Computed:    true,
 			},
 
 			"remove_aws_cni": schema.BoolAttribute{
