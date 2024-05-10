@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"k8s.io/client-go/kubernetes"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -23,8 +22,7 @@ func NewJobResource() resource.Resource {
 }
 
 type JobResource struct {
-	host      string
-	clientset *kubernetes.Clientset
+	provider *CleanEksProvider
 }
 
 type JobResourceModel struct {
@@ -266,19 +264,9 @@ func (r *JobResource) Configure(ctx context.Context, req resource.ConfigureReque
 		)
 
 		return
+	} else {
+		r.provider = cleanEksProviderResourceData
 	}
-
-	clientSet, err := cleanEksProviderResourceData.GetClientSet(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error getting Kubernetes client",
-			fmt.Sprintf("Error getting Kubernetes client: %s", err),
-		)
-		return
-	}
-
-	r.clientset = clientSet
-	r.host = cleanEksProviderResourceData.Host
 }
 
 func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, res *resource.CreateResponse) {
@@ -294,9 +282,23 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		"jobConfig": fmt.Sprintf("%+v", model),
 	})
 
-	clientset := r.clientset
+	cleanEksProviderResourceData := r.provider
+	if cleanEksProviderResourceData == nil {
+		res.Diagnostics.AddError(
+			"Provider not configured",
+			fmt.Sprintf("Provider not configured"),
+		)
+		return
+	}
 
-	var err error
+	clientSet, err := cleanEksProviderResourceData.GetClientSet(ctx)
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error getting Kubernetes client",
+			fmt.Sprintf("Error getting Kubernetes client: %s", err),
+		)
+		return
+	}
 
 	removeAwsCni := true
 	if !(model.RemoveAwsCni.IsNull() || model.RemoveAwsCni.IsUnknown()) {
@@ -320,7 +322,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	if removeAwsCni || removeKubeProxy || removeCoreDns || importCorednsToHelm {
 		if removeAwsCni {
-			_, err = DeleteDaemonset(ctx, clientset, "kube-system", "aws-node")
+			_, err = DeleteDaemonset(ctx, clientSet, "kube-system", "aws-node")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error removing AWS CNI daemonset",
@@ -331,7 +333,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		}
 
 		if removeKubeProxy {
-			_, err = DeleteDaemonset(ctx, clientset, "kube-system", "kube-proxy")
+			_, err = DeleteDaemonset(ctx, clientSet, "kube-system", "kube-proxy")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error removing Kube Proxy daemonset",
@@ -340,7 +342,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 				return
 			}
 
-			_, err = DeleteConfigMap(ctx, clientset, "kube-system", "kube-proxy")
+			_, err = DeleteConfigMap(ctx, clientSet, "kube-system", "kube-proxy")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error removing Kube Proxy config map",
@@ -351,7 +353,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		}
 
 		if removeCoreDns {
-			_, err = DeleteDeployment(ctx, clientset, "kube-system", "coredns")
+			_, err = DeleteDeployment(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error removing CoreDNS deployment",
@@ -362,7 +364,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		}
 
 		if !removeCoreDns && importCorednsToHelm {
-			err = ImportDeploymentIntoHelm(ctx, clientset, "kube-system", "coredns")
+			err = ImportDeploymentIntoHelm(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error importing CoreDns deployment to Helm",
@@ -371,7 +373,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 				return
 			}
 
-			err = ImportServiceIntoHelm(ctx, clientset, "kube-system", "kube-dns")
+			err = ImportServiceIntoHelm(ctx, clientSet, "kube-system", "kube-dns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error importing CoreDns service to Helm",
@@ -380,7 +382,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 				return
 			}
 
-			err = ImportServiceAccountIntoHelm(ctx, clientset, "kube-system", "coredns")
+			err = ImportServiceAccountIntoHelm(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error importing CoreDns service account to Helm",
@@ -389,7 +391,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 				return
 			}
 
-			err = ImportConfigMapAccountIntoHelm(ctx, clientset, "kube-system", "coredns")
+			err = ImportConfigMapAccountIntoHelm(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error importing CoreDns config map to Helm",
@@ -398,7 +400,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 				return
 			}
 
-			err = ImportPodDisruptionBudgetIntoHelm(ctx, clientset, "kube-system", "coredns")
+			err = ImportPodDisruptionBudgetIntoHelm(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error importing CoreDns pod disruption budget to Helm",
@@ -410,7 +412,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	// Read kubernetes to populate model
-	awsCniDaemonsetExists, err := DaemonsetExist(ctx, clientset, "kube-system", "aws-node")
+	awsCniDaemonsetExists, err := DaemonsetExist(ctx, clientSet, "kube-system", "aws-node")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking for AWS CNI",
@@ -420,7 +422,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 	model.AwsCniDaemonsetExists = basetypes.NewBoolValue(awsCniDaemonsetExists)
 
-	kubeProxyDaemonsetExists, err := DaemonsetExist(ctx, clientset, "kube-system", "kube-proxy")
+	kubeProxyDaemonsetExists, err := DaemonsetExist(ctx, clientSet, "kube-system", "kube-proxy")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking for Kube Proxy",
@@ -430,7 +432,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 	model.KubeProxyDaemonsetExists = basetypes.NewBoolValue(kubeProxyDaemonsetExists)
 
-	kubeProxyConfigMapExists, err := ConfigMapExist(ctx, clientset, "kube-system", "kube-proxy")
+	kubeProxyConfigMapExists, err := ConfigMapExist(ctx, clientSet, "kube-system", "kube-proxy")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking for Kube Proxy config map",
@@ -440,7 +442,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 	model.KubeProxyConfigMapExists = basetypes.NewBoolValue(kubeProxyConfigMapExists)
 
-	deploymentHelmReleaseNameAnnotationSet, deploymentHelmReleaseNamespaceAnnotationSet, deploymentManagedByLabelSet, deploymentAmazonManagedLabelRemoved, err := DeploymentImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	deploymentHelmReleaseNameAnnotationSet, deploymentHelmReleaseNamespaceAnnotationSet, deploymentManagedByLabelSet, deploymentAmazonManagedLabelRemoved, err := DeploymentImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking CoreDns deployment to Helm",
@@ -453,7 +455,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	model.CorednsDeploymentLabelManagedBySet = basetypes.NewBoolValue(deploymentManagedByLabelSet)
 	model.CorednsDeploymentLabelAmazonManagedRemoved = basetypes.NewBoolValue(deploymentAmazonManagedLabelRemoved)
 
-	serviceHelmReleaseNameAnnotationSet, serviceHelmReleaseNamespaceAnnotationSet, serviceManagedByLabelSet, serviceAmazonManagedLabelRemoved, err := ServiceImportedIntoHelm(ctx, clientset, "kube-system", "kube-dns")
+	serviceHelmReleaseNameAnnotationSet, serviceHelmReleaseNamespaceAnnotationSet, serviceManagedByLabelSet, serviceAmazonManagedLabelRemoved, err := ServiceImportedIntoHelm(ctx, clientSet, "kube-system", "kube-dns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking CoreDns service to Helm",
@@ -467,7 +469,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	model.CorednsServiceLabelManagedBySet = basetypes.NewBoolValue(serviceManagedByLabelSet)
 	model.CorednsServiceLabelAmazonManagedRemoved = basetypes.NewBoolValue(serviceAmazonManagedLabelRemoved)
 
-	serviceAccountHelmReleaseNameAnnotationSet, serviceAccountHelmReleaseNamespaceAnnotationSet, serviceAccountManagedByLabelSet, serviceAccountAmazonManagedLabelRemoved, err := ServiceAccountImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	serviceAccountHelmReleaseNameAnnotationSet, serviceAccountHelmReleaseNamespaceAnnotationSet, serviceAccountManagedByLabelSet, serviceAccountAmazonManagedLabelRemoved, err := ServiceAccountImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking CoreDns service account to Helm",
@@ -481,7 +483,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	model.CorednsServiceAccountLabelManagedBySet = basetypes.NewBoolValue(serviceAccountManagedByLabelSet)
 	model.CorednsServiceAccountLabelAmazonManagedRemoved = basetypes.NewBoolValue(serviceAccountAmazonManagedLabelRemoved)
 
-	configMapHelmReleaseNameAnnotationSet, configMapHelmReleaseNamespaceAnnotationSet, configMapManagedByLabelSet, configMapAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	configMapHelmReleaseNameAnnotationSet, configMapHelmReleaseNamespaceAnnotationSet, configMapManagedByLabelSet, configMapAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking CoreDns config map to Helm",
@@ -495,7 +497,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	model.CorednsConfigMapLabelManagedBySet = basetypes.NewBoolValue(configMapManagedByLabelSet)
 	model.CorednsConfigMapLabelAmazonManagedRemoved = basetypes.NewBoolValue(configMapAmazonManagedLabelRemoved)
 
-	podDistruptionBudgetHelmReleaseNameAnnotationSet, podDistruptionBudgetHelmReleaseNamespaceAnnotationSet, podDistruptionBudgetManagedByLabelSet, podDistruptionBudgetAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	podDistruptionBudgetHelmReleaseNameAnnotationSet, podDistruptionBudgetHelmReleaseNamespaceAnnotationSet, podDistruptionBudgetManagedByLabelSet, podDistruptionBudgetAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking CoreDns pod disruption budget to Helm",
@@ -509,7 +511,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	model.CorednsPodDistruptionBudgetLabelManagedBySet = basetypes.NewBoolValue(podDistruptionBudgetManagedByLabelSet)
 	model.CorednsPodDistruptionBudgetLabelAmazonManagedRemoved = basetypes.NewBoolValue(podDistruptionBudgetAmazonManagedLabelRemoved)
 
-	model.ID = basetypes.NewStringValue(r.host)
+	model.ID = basetypes.NewStringValue(r.provider.Host)
 
 	// Finally, set the state
 	tflog.Debug(ctx, "Storing job info into the state")
@@ -527,21 +529,27 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 		"jobConfig": fmt.Sprintf("%+v", model),
 	})
 
-	clientset := r.clientset
+	cleanEksProviderResourceData := r.provider
+	if cleanEksProviderResourceData == nil {
+		res.Diagnostics.AddError(
+			"Provider not configured",
+			fmt.Sprintf("Provider not configured"),
+		)
+		return
+	}
 
-	var err error
-
+	clientSet, err := cleanEksProviderResourceData.GetClientSet(ctx)
 	if err != nil {
 		res.Diagnostics.AddError(
-			"Error making request",
-			fmt.Sprintf("Error making request: %s", err),
+			"Error getting Kubernetes client",
+			fmt.Sprintf("Error getting Kubernetes client: %s", err),
 		)
 		return
 	}
 
 	// Read kubernetes to populate model
 
-	awsCniDaemonsetExists, err := DaemonsetExist(ctx, clientset, "kube-system", "aws-node")
+	awsCniDaemonsetExists, err := DaemonsetExist(ctx, clientSet, "kube-system", "aws-node")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking for AWS CNI daemonset",
@@ -551,7 +559,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	}
 	model.AwsCniDaemonsetExists = basetypes.NewBoolValue(awsCniDaemonsetExists)
 
-	kubeProxyDaemonsetExists, err := DaemonsetExist(ctx, clientset, "kube-system", "kube-proxy")
+	kubeProxyDaemonsetExists, err := DaemonsetExist(ctx, clientSet, "kube-system", "kube-proxy")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking for Kube Proxy daemonset",
@@ -561,7 +569,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	}
 	model.KubeProxyDaemonsetExists = basetypes.NewBoolValue(kubeProxyDaemonsetExists)
 
-	kubeProxyConfigMapExists, err := ConfigMapExist(ctx, clientset, "kube-system", "kube-proxy")
+	kubeProxyConfigMapExists, err := ConfigMapExist(ctx, clientSet, "kube-system", "kube-proxy")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking for Kube Proxy config map",
@@ -571,7 +579,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	}
 	model.KubeProxyConfigMapExists = basetypes.NewBoolValue(kubeProxyConfigMapExists)
 
-	deploymentHelmReleaseNameAnnotationSet, deploymentHelmReleaseNamespaceAnnotationSet, deploymentManagedByLabelSet, deploymentAmazonManagedLabelRemoved, err := DeploymentImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	deploymentHelmReleaseNameAnnotationSet, deploymentHelmReleaseNamespaceAnnotationSet, deploymentManagedByLabelSet, deploymentAmazonManagedLabelRemoved, err := DeploymentImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking CoreDns deployment to Helm",
@@ -584,7 +592,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	model.CorednsDeploymentLabelManagedBySet = basetypes.NewBoolValue(deploymentManagedByLabelSet)
 	model.CorednsDeploymentLabelAmazonManagedRemoved = basetypes.NewBoolValue(deploymentAmazonManagedLabelRemoved)
 
-	serviceHelmReleaseNameAnnotationSet, serviceHelmReleaseNamespaceAnnotationSet, serviceManagedByLabelSet, serviceAmazonManagedLabelRemoved, err := ServiceImportedIntoHelm(ctx, clientset, "kube-system", "kube-dns")
+	serviceHelmReleaseNameAnnotationSet, serviceHelmReleaseNamespaceAnnotationSet, serviceManagedByLabelSet, serviceAmazonManagedLabelRemoved, err := ServiceImportedIntoHelm(ctx, clientSet, "kube-system", "kube-dns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking CoreDns service to Helm",
@@ -598,7 +606,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	model.CorednsServiceLabelManagedBySet = basetypes.NewBoolValue(serviceManagedByLabelSet)
 	model.CorednsServiceLabelAmazonManagedRemoved = basetypes.NewBoolValue(serviceAmazonManagedLabelRemoved)
 
-	serviceAccountHelmReleaseNameAnnotationSet, serviceAccountHelmReleaseNamespaceAnnotationSet, serviceAccountManagedByLabelSet, serviceAccountAmazonManagedLabelRemoved, err := ServiceAccountImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	serviceAccountHelmReleaseNameAnnotationSet, serviceAccountHelmReleaseNamespaceAnnotationSet, serviceAccountManagedByLabelSet, serviceAccountAmazonManagedLabelRemoved, err := ServiceAccountImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking CoreDns service account to Helm",
@@ -612,7 +620,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	model.CorednsServiceAccountLabelManagedBySet = basetypes.NewBoolValue(serviceAccountManagedByLabelSet)
 	model.CorednsServiceAccountLabelAmazonManagedRemoved = basetypes.NewBoolValue(serviceAccountAmazonManagedLabelRemoved)
 
-	configMapHelmReleaseNameAnnotationSet, configMapHelmReleaseNamespaceAnnotationSet, configMapManagedByLabelSet, configMapAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	configMapHelmReleaseNameAnnotationSet, configMapHelmReleaseNamespaceAnnotationSet, configMapManagedByLabelSet, configMapAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking CoreDns config map to Helm",
@@ -626,7 +634,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	model.CorednsConfigMapLabelManagedBySet = basetypes.NewBoolValue(configMapManagedByLabelSet)
 	model.CorednsConfigMapLabelAmazonManagedRemoved = basetypes.NewBoolValue(configMapAmazonManagedLabelRemoved)
 
-	podDistruptionBudgetHelmReleaseNameAnnotationSet, podDistruptionBudgetHelmReleaseNamespaceAnnotationSet, podDistruptionBudgetManagedByLabelSet, podDistruptionBudgetAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	podDistruptionBudgetHelmReleaseNameAnnotationSet, podDistruptionBudgetHelmReleaseNamespaceAnnotationSet, podDistruptionBudgetManagedByLabelSet, podDistruptionBudgetAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking CoreDns pod disruption budget to Helm",
@@ -658,9 +666,23 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		"jobConfig": fmt.Sprintf("%+v", model),
 	})
 
-	clientset := r.clientset
+	cleanEksProviderResourceData := r.provider
+	if cleanEksProviderResourceData == nil {
+		res.Diagnostics.AddError(
+			"Provider not configured",
+			fmt.Sprintf("Provider not configured"),
+		)
+		return
+	}
 
-	var err error
+	clientSet, err := cleanEksProviderResourceData.GetClientSet(ctx)
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error getting Kubernetes client",
+			fmt.Sprintf("Error getting Kubernetes client: %s", err),
+		)
+		return
+	}
 
 	removeAwsCni := true
 	if !(model.RemoveAwsCni.IsNull() || model.RemoveAwsCni.IsUnknown()) {
@@ -692,7 +714,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	if removeAwsCni || removeKubeProxy || importCorednsToHelm {
 		if removeAwsCni {
-			_, err = DeleteDaemonset(ctx, clientset, "kube-system", "aws-node")
+			_, err = DeleteDaemonset(ctx, clientSet, "kube-system", "aws-node")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error removing AWS CNI daemonset",
@@ -703,7 +725,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		}
 
 		if removeKubeProxy {
-			_, err = DeleteDaemonset(ctx, clientset, "kube-system", "kube-proxy")
+			_, err = DeleteDaemonset(ctx, clientSet, "kube-system", "kube-proxy")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error removing Kube Proxy daemonset",
@@ -712,7 +734,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 				return
 			}
 
-			_, err = DeleteConfigMap(ctx, clientset, "kube-system", "kube-proxy")
+			_, err = DeleteConfigMap(ctx, clientSet, "kube-system", "kube-proxy")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error removing Kube Proxy config map",
@@ -724,7 +746,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 		if removeCoreDns {
 			// We only want to delete the Amazon CoreDNS and not any further deployed versions
-			exists, err := DeploymentExistsAndIsAwsOne(ctx, clientset, "kube-system", "coredns")
+			exists, err := DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error removing CoreDNS",
@@ -734,7 +756,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 			}
 
 			if exists {
-				_, err = DeleteDeployment(ctx, clientset, "kube-system", "coredns")
+				_, err = DeleteDeployment(ctx, clientSet, "kube-system", "coredns")
 				if err != nil {
 					res.Diagnostics.AddError(
 						"Error removing CoreDNS deployment",
@@ -746,7 +768,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		}
 
 		if !removeCoreDns && importCorednsToHelm {
-			err = ImportDeploymentIntoHelm(ctx, clientset, "kube-system", "coredns")
+			err = ImportDeploymentIntoHelm(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error importing CoreDns deployment to Helm",
@@ -755,7 +777,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 				return
 			}
 
-			err = ImportServiceIntoHelm(ctx, clientset, "kube-system", "kube-dns")
+			err = ImportServiceIntoHelm(ctx, clientSet, "kube-system", "kube-dns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error importing CoreDns service to Helm",
@@ -764,7 +786,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 				return
 			}
 
-			err = ImportServiceAccountIntoHelm(ctx, clientset, "kube-system", "coredns")
+			err = ImportServiceAccountIntoHelm(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error importing CoreDns service account to Helm",
@@ -773,7 +795,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 				return
 			}
 
-			err = ImportConfigMapAccountIntoHelm(ctx, clientset, "kube-system", "coredns")
+			err = ImportConfigMapAccountIntoHelm(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error importing CoreDns config map to Helm",
@@ -782,7 +804,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 				return
 			}
 
-			err = ImportPodDisruptionBudgetIntoHelm(ctx, clientset, "kube-system", "coredns")
+			err = ImportPodDisruptionBudgetIntoHelm(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error importing CoreDns pod disruption budget to Helm",
@@ -795,7 +817,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	// Read kubernetes to populate model
 
-	awsCniDaemonsetExists, err := DaemonsetExist(ctx, clientset, "kube-system", "aws-node")
+	awsCniDaemonsetExists, err := DaemonsetExist(ctx, clientSet, "kube-system", "aws-node")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking for AWS CNI",
@@ -805,7 +827,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 	model.AwsCniDaemonsetExists = basetypes.NewBoolValue(awsCniDaemonsetExists)
 
-	kubeProxyDaemonsetExists, err := DaemonsetExist(ctx, clientset, "kube-system", "kube-proxy")
+	kubeProxyDaemonsetExists, err := DaemonsetExist(ctx, clientSet, "kube-system", "kube-proxy")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking for Kube Proxy",
@@ -815,7 +837,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 	model.KubeProxyDaemonsetExists = basetypes.NewBoolValue(kubeProxyDaemonsetExists)
 
-	kubeProxyConfigMapExists, err := ConfigMapExist(ctx, clientset, "kube-system", "kube-proxy")
+	kubeProxyConfigMapExists, err := ConfigMapExist(ctx, clientSet, "kube-system", "kube-proxy")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking for Kube Proxy config map",
@@ -825,7 +847,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 	model.KubeProxyConfigMapExists = basetypes.NewBoolValue(kubeProxyConfigMapExists)
 
-	deploymentHelmReleaseNameAnnotationSet, deploymentHelmReleaseNamespaceAnnotationSet, deploymentManagedByLabelSet, deploymentAmazonManagedLabelRemoved, err := DeploymentImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	deploymentHelmReleaseNameAnnotationSet, deploymentHelmReleaseNamespaceAnnotationSet, deploymentManagedByLabelSet, deploymentAmazonManagedLabelRemoved, err := DeploymentImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking CoreDns deployment to Helm",
@@ -838,7 +860,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	model.CorednsDeploymentLabelManagedBySet = basetypes.NewBoolValue(deploymentManagedByLabelSet)
 	model.CorednsDeploymentLabelAmazonManagedRemoved = basetypes.NewBoolValue(deploymentAmazonManagedLabelRemoved)
 
-	serviceHelmReleaseNameAnnotationSet, serviceHelmReleaseNamespaceAnnotationSet, serviceManagedByLabelSet, serviceAmazonManagedLabelRemoved, err := ServiceImportedIntoHelm(ctx, clientset, "kube-system", "kube-dns")
+	serviceHelmReleaseNameAnnotationSet, serviceHelmReleaseNamespaceAnnotationSet, serviceManagedByLabelSet, serviceAmazonManagedLabelRemoved, err := ServiceImportedIntoHelm(ctx, clientSet, "kube-system", "kube-dns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking CoreDns service to Helm",
@@ -852,7 +874,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	model.CorednsServiceLabelManagedBySet = basetypes.NewBoolValue(serviceManagedByLabelSet)
 	model.CorednsServiceLabelAmazonManagedRemoved = basetypes.NewBoolValue(serviceAmazonManagedLabelRemoved)
 
-	serviceAccountHelmReleaseNameAnnotationSet, serviceAccountHelmReleaseNamespaceAnnotationSet, serviceAccountManagedByLabelSet, serviceAccountAmazonManagedLabelRemoved, err := ServiceAccountImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	serviceAccountHelmReleaseNameAnnotationSet, serviceAccountHelmReleaseNamespaceAnnotationSet, serviceAccountManagedByLabelSet, serviceAccountAmazonManagedLabelRemoved, err := ServiceAccountImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking CoreDns service account to Helm",
@@ -866,7 +888,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	model.CorednsServiceAccountLabelManagedBySet = basetypes.NewBoolValue(serviceAccountManagedByLabelSet)
 	model.CorednsServiceAccountLabelAmazonManagedRemoved = basetypes.NewBoolValue(serviceAccountAmazonManagedLabelRemoved)
 
-	configMapHelmReleaseNameAnnotationSet, configMapHelmReleaseNamespaceAnnotationSet, configMapManagedByLabelSet, configMapAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	configMapHelmReleaseNameAnnotationSet, configMapHelmReleaseNamespaceAnnotationSet, configMapManagedByLabelSet, configMapAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking CoreDns config map to Helm",
@@ -880,7 +902,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	model.CorednsConfigMapLabelManagedBySet = basetypes.NewBoolValue(configMapManagedByLabelSet)
 	model.CorednsConfigMapLabelAmazonManagedRemoved = basetypes.NewBoolValue(configMapAmazonManagedLabelRemoved)
 
-	podDistruptionBudgetHelmReleaseNameAnnotationSet, podDistruptionBudgetHelmReleaseNamespaceAnnotationSet, podDistruptionBudgetManagedByLabelSet, podDistruptionBudgetAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientset, "kube-system", "coredns")
+	podDistruptionBudgetHelmReleaseNameAnnotationSet, podDistruptionBudgetHelmReleaseNamespaceAnnotationSet, podDistruptionBudgetManagedByLabelSet, podDistruptionBudgetAmazonManagedLabelRemoved, err := ConfigMapImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking CoreDns pod disruption budget to Helm",
