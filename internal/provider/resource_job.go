@@ -354,16 +354,16 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 		if removeCoreDns {
 			// We only want to delete the Amazon CoreDNS and not any further deployed versions
-			exists, err := DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+			deploymentExistsAndIsAwsOne, err := DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
-					"Error removing CoreDNS",
-					fmt.Sprintf("Error removing CoreDNS: %s", err),
+					"Error checking CoreDNS deployment is AWS one",
+					fmt.Sprintf("Error checking CoreDNS deployment is AWS one: %s", err),
 				)
 				return
 			}
 
-			if exists {
+			if deploymentExistsAndIsAwsOne {
 				_, err = DeleteDeployment(ctx, clientSet, "kube-system", "coredns")
 				if err != nil {
 					res.Diagnostics.AddError(
@@ -372,7 +372,18 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 					)
 					return
 				}
+			}
 
+			serviceExistsAndIsAwsOne, err := ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error checking CoreDNS service is AWS one",
+					fmt.Sprintf("Error checking CoreDNS service is AWS one: %s", err),
+				)
+				return
+			}
+
+			if serviceExistsAndIsAwsOne {
 				_, err = DeleteService(ctx, clientSet, "kube-system", "kube-dns")
 				if err != nil {
 					res.Diagnostics.AddError(
@@ -381,8 +392,19 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 					)
 					return
 				}
+			}
 
-				_, err = DeleteServiceAccount(ctx, clientSet, "kube-system", "kube-dns")
+			serviceAccountExistsAndIsAwsOne, err := ServiceAccountExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error checking CoreDNS service account is AWS one",
+					fmt.Sprintf("Error checking CoreDNS service account is AWS one: %s", err),
+				)
+				return
+			}
+
+			if serviceAccountExistsAndIsAwsOne {
+				_, err = DeleteServiceAccount(ctx, clientSet, "kube-system", "coredns")
 				if err != nil {
 					res.Diagnostics.AddError(
 						"Error removing CoreDNS service account",
@@ -390,7 +412,18 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 					)
 					return
 				}
+			}
 
+			configMapExistsAndIsAwsOne, err := ConfigMapExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error checking CoreDNS config map is AWS one",
+					fmt.Sprintf("Error checking CoreDNS config map is AWS one: %s", err),
+				)
+				return
+			}
+
+			if configMapExistsAndIsAwsOne {
 				_, err = DeleteConfigMap(ctx, clientSet, "kube-system", "coredns")
 				if err != nil {
 					res.Diagnostics.AddError(
@@ -399,8 +432,19 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 					)
 					return
 				}
+			}
 
-				_, err = DeletePodDisruptionBudget(ctx, clientSet, "kube-system", "kube-dns")
+			podDisruptionBudgetExistsAndIsAwsOne, err := PodDisruptionBudgetExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error checking CoreDNS pod disruption budget is AWS one",
+					fmt.Sprintf("Error checking CoreDNS pod disruption budget is AWS one: %s", err),
+				)
+				return
+			}
+
+			if podDisruptionBudgetExistsAndIsAwsOne {
+				_, err = DeletePodDisruptionBudget(ctx, clientSet, "kube-system", "coredns")
 				if err != nil {
 					res.Diagnostics.AddError(
 						"Error removing CoreDNS pod disruption budget",
@@ -794,16 +838,16 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 		if removeCoreDns {
 			// We only want to delete the Amazon CoreDNS and not any further deployed versions
-			exists, err := DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+			deploymentExistsAndIsAwsOne, err := DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
-					"Error removing CoreDNS",
-					fmt.Sprintf("Error removing CoreDNS: %s", err),
+					"Error checking CoreDNS deployment is AWS one",
+					fmt.Sprintf("Error checking CoreDNS deployment is AWS one: %s", err),
 				)
 				return
 			}
 
-			if exists {
+			if deploymentExistsAndIsAwsOne {
 				_, err = DeleteDeployment(ctx, clientSet, "kube-system", "coredns")
 				if err != nil {
 					res.Diagnostics.AddError(
@@ -812,7 +856,18 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 					)
 					return
 				}
+			}
 
+			serviceExistsAndIsAwsOne, err := ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error checking CoreDNS service is AWS one",
+					fmt.Sprintf("Error checking CoreDNS service is AWS one: %s", err),
+				)
+				return
+			}
+
+			if serviceExistsAndIsAwsOne {
 				_, err = DeleteService(ctx, clientSet, "kube-system", "kube-dns")
 				if err != nil {
 					res.Diagnostics.AddError(
@@ -821,8 +876,19 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 					)
 					return
 				}
+			}
 
-				_, err = DeleteServiceAccount(ctx, clientSet, "kube-system", "kube-dns")
+			serviceAccountExistsAndIsAwsOne, err := ServiceAccountExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error checking CoreDNS service account is AWS one",
+					fmt.Sprintf("Error checking CoreDNS service account is AWS one: %s", err),
+				)
+				return
+			}
+
+			if serviceAccountExistsAndIsAwsOne {
+				_, err = DeleteServiceAccount(ctx, clientSet, "kube-system", "coredns")
 				if err != nil {
 					res.Diagnostics.AddError(
 						"Error removing CoreDNS service account",
@@ -830,17 +896,39 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 					)
 					return
 				}
+			}
 
+			configMapExistsAndIsAwsOne, err := ConfigMapExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error checking CoreDNS config map is AWS one",
+					fmt.Sprintf("Error checking CoreDNS config map is AWS one: %s", err),
+				)
+				return
+			}
+
+			if configMapExistsAndIsAwsOne {
 				_, err = DeleteConfigMap(ctx, clientSet, "kube-system", "coredns")
 				if err != nil {
 					res.Diagnostics.AddError(
-						"Error removing CoreDNS config map",
-						fmt.Sprintf("Error removing CoreDNS config map: %s", err),
+						"Error removing CoreDNS configmap",
+						fmt.Sprintf("Error removing CoreDNS configmap: %s", err),
 					)
 					return
 				}
+			}
 
-				_, err = DeletePodDisruptionBudget(ctx, clientSet, "kube-system", "kube-dns")
+			podDisruptionBudgetExistsAndIsAwsOne, err := PodDisruptionBudgetExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+			if err != nil {
+				res.Diagnostics.AddError(
+					"Error checking CoreDNS pod disruption budget is AWS one",
+					fmt.Sprintf("Error checking CoreDNS pod disruption budget is AWS one: %s", err),
+				)
+				return
+			}
+
+			if podDisruptionBudgetExistsAndIsAwsOne {
+				_, err = DeletePodDisruptionBudget(ctx, clientSet, "kube-system", "coredns")
 				if err != nil {
 					res.Diagnostics.AddError(
 						"Error removing CoreDNS pod disruption budget",

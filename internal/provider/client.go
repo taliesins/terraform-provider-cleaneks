@@ -35,6 +35,23 @@ func DaemonsetExist(ctx context.Context, clientset *kubernetes.Clientset, namesp
 	}
 }
 
+func DaemonsetExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
+	deployment, err := clientset.AppsV1().DaemonSets(namespace).Get(ctx, name, metav1.GetOptions{})
+	switch {
+	case err != nil && !errors.IsNotFound(err):
+		return false, err
+	case errors.IsNotFound(err):
+		return false, nil
+	default:
+		if deployment.Labels == nil {
+			return false, nil
+		}
+
+		_, ok := deployment.Annotations[amazonManagedLabelName]
+		return ok, nil
+	}
+}
+
 func DeleteDaemonset(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
 	err = clientset.AppsV1().DaemonSets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	switch {
@@ -56,6 +73,23 @@ func DeploymentExist(ctx context.Context, clientset *kubernetes.Clientset, names
 		return false, nil
 	default:
 		return true, nil
+	}
+}
+
+func DeploymentExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
+	deployment, err := clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+	switch {
+	case err != nil && !errors.IsNotFound(err):
+		return false, err
+	case errors.IsNotFound(err):
+		return false, nil
+	default:
+		if deployment.Labels == nil {
+			return false, nil
+		}
+
+		_, ok := deployment.Annotations[amazonManagedLabelName]
+		return ok, nil
 	}
 }
 
@@ -83,6 +117,23 @@ func ServiceExist(ctx context.Context, clientset *kubernetes.Clientset, namespac
 	}
 }
 
+func ServiceExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
+	deployment, err := clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
+	switch {
+	case err != nil && !errors.IsNotFound(err):
+		return false, err
+	case errors.IsNotFound(err):
+		return false, nil
+	default:
+		if deployment.Labels == nil {
+			return false, nil
+		}
+
+		_, ok := deployment.Annotations[amazonManagedLabelName]
+		return ok, nil
+	}
+}
+
 func DeleteService(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
 	err = clientset.CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	switch {
@@ -95,8 +146,8 @@ func DeleteService(ctx context.Context, clientset *kubernetes.Clientset, namespa
 	}
 }
 
-func DeleteServiceAccount(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
-	err = clientset.CoreV1().ServiceAccounts(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+func ServiceAccountExist(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
+	_, err = clientset.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
 	switch {
 	case err != nil && !errors.IsNotFound(err):
 		return false, err
@@ -107,8 +158,25 @@ func DeleteServiceAccount(ctx context.Context, clientset *kubernetes.Clientset, 
 	}
 }
 
-func DeleteConfigMap(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
-	err = clientset.CoreV1().ConfigMaps(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+func ServiceAccountExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
+	deployment, err := clientset.CoreV1().ServiceAccounts(namespace).Get(ctx, name, metav1.GetOptions{})
+	switch {
+	case err != nil && !errors.IsNotFound(err):
+		return false, err
+	case errors.IsNotFound(err):
+		return false, nil
+	default:
+		if deployment.Labels == nil {
+			return false, nil
+		}
+
+		_, ok := deployment.Annotations[amazonManagedLabelName]
+		return ok, nil
+	}
+}
+
+func DeleteServiceAccount(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
+	err = clientset.CoreV1().ServiceAccounts(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	switch {
 	case err != nil && !errors.IsNotFound(err):
 		return false, err
@@ -131,20 +199,8 @@ func ConfigMapExist(ctx context.Context, clientset *kubernetes.Clientset, namesp
 	}
 }
 
-func DeletePodDisruptionBudget(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
-	err = clientset.PolicyV1().PodDisruptionBudgets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-	switch {
-	case err != nil && !errors.IsNotFound(err):
-		return false, err
-	case errors.IsNotFound(err):
-		return false, nil
-	default:
-		return true, nil
-	}
-}
-
-func DeploymentExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
-	deployment, err := clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+func ConfigMapExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
+	deployment, err := clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	switch {
 	case err != nil && !errors.IsNotFound(err):
 		return false, err
@@ -157,6 +213,59 @@ func DeploymentExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.Clie
 
 		_, ok := deployment.Annotations[amazonManagedLabelName]
 		return ok, nil
+	}
+}
+
+func DeleteConfigMap(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
+	err = clientset.CoreV1().ConfigMaps(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	switch {
+	case err != nil && !errors.IsNotFound(err):
+		return false, err
+	case errors.IsNotFound(err):
+		return false, nil
+	default:
+		return true, nil
+	}
+}
+
+func PodDisruptionBudgetExist(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
+	_, err = clientset.PolicyV1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
+	switch {
+	case err != nil && !errors.IsNotFound(err):
+		return false, err
+	case errors.IsNotFound(err):
+		return false, nil
+	default:
+		return true, nil
+	}
+}
+
+func PodDisruptionBudgetExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
+	deployment, err := clientset.PolicyV1().PodDisruptionBudgets(namespace).Get(ctx, name, metav1.GetOptions{})
+	switch {
+	case err != nil && !errors.IsNotFound(err):
+		return false, err
+	case errors.IsNotFound(err):
+		return false, nil
+	default:
+		if deployment.Labels == nil {
+			return false, nil
+		}
+
+		_, ok := deployment.Annotations[amazonManagedLabelName]
+		return ok, nil
+	}
+}
+
+func DeletePodDisruptionBudget(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
+	err = clientset.PolicyV1().PodDisruptionBudgets(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+	switch {
+	case err != nil && !errors.IsNotFound(err):
+		return false, err
+	case errors.IsNotFound(err):
+		return false, nil
+	default:
+		return true, nil
 	}
 }
 
