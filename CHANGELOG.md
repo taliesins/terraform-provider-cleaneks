@@ -1,4 +1,10 @@
 
+<a name="v0.1.17"></a>
+## [v0.1.17](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.16...v0.1.17) (2024-05-13)
+
+### Fix
+- [4c1dfa9](https://github.com/taliesins/terraform-provider-cleaneks/commit/4c1dfa9309f8b4a2ac5684ce19beb6236c59860e) Need to trigger change if values haven't been set yet
+
 <a name="v0.1.16"></a>
 ## [v0.1.16](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.15...v0.1.16) (2024-05-13)
 
