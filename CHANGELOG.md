@@ -1,4 +1,10 @@
 
+<a name="v0.1.15"></a>
+## [v0.1.15](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.14...v0.1.15) (2024-05-13)
+
+### Fix
+- [c43dc5c](https://github.com/taliesins/terraform-provider-cleaneks/commit/c43dc5c58b2feac4ef14a8eb72af9ee5f74a957d) Check each object individually to see if it should be removed
+
 <a name="v0.1.14"></a>
 ## [v0.1.14](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.13...v0.1.14) (2024-05-13)
 
