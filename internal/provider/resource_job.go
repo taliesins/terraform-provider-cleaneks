@@ -548,7 +548,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		)
 		return
 	}
-	model.AwsCniDaemonsetExists = basetypes.NewBoolValue(awsCniDaemonsetExists)
+	model.AwsCniDaemonsetExists = basetypes.NewBoolValue(removeAwsCni && awsCniDaemonsetExists)
 
 	model.RemoveAwsCni = basetypes.NewBoolValue(!(awsCniDaemonsetExists))
 
@@ -572,7 +572,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 	model.KubeProxyConfigMapExists = basetypes.NewBoolValue(kubeProxyConfigMapExists)
 
-	model.RemoveKubeProxy = basetypes.NewBoolValue(!(kubeProxyDaemonsetExists && kubeProxyConfigMapExists))
+	model.RemoveKubeProxy = basetypes.NewBoolValue(removeKubeProxy && !(kubeProxyDaemonsetExists && kubeProxyConfigMapExists))
 
 	awsCoreDnsAwsDeploymentExists, err := DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
@@ -624,7 +624,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 	model.AwsCoreDnsPodDisruptionBudgetExists = basetypes.NewBoolValue(awsCoreDnsPodDisruptionBudgetExists)
 
-	model.RemoveCoreDns = basetypes.NewBoolValue(!(awsCoreDnsAwsDeploymentExists && awsCoreDnsServiceExists && awsCoreDnsServiceAccountExists && awsCoreDnsConfigMapExists && awsCoreDnsPodDisruptionBudgetExists))
+	model.RemoveCoreDns = basetypes.NewBoolValue(removeCoreDns && !(awsCoreDnsAwsDeploymentExists && awsCoreDnsServiceExists && awsCoreDnsServiceAccountExists && awsCoreDnsConfigMapExists && awsCoreDnsPodDisruptionBudgetExists))
 
 	deploymentHelmReleaseNameAnnotationSet, deploymentHelmReleaseNamespaceAnnotationSet, deploymentManagedByLabelSet, deploymentAmazonManagedLabelRemoved, err := DeploymentImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
@@ -695,7 +695,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	model.CorednsPodDistruptionBudgetLabelManagedBySet = basetypes.NewBoolValue(podDistruptionBudgetManagedByLabelSet)
 	model.CorednsPodDistruptionBudgetLabelAmazonManagedRemoved = basetypes.NewBoolValue(podDistruptionBudgetAmazonManagedLabelRemoved)
 
-	model.ImportCorednsToHelm = basetypes.NewBoolValue(!(deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
+	model.ImportCorednsToHelm = basetypes.NewBoolValue(importCorednsToHelm && (deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
 
 	model.ID = basetypes.NewStringValue(r.provider.Host)
 
@@ -733,6 +733,26 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 		return
 	}
 
+	removeAwsCni := true
+	if !(model.RemoveAwsCni.IsNull() || model.RemoveAwsCni.IsUnknown()) {
+		removeAwsCni = model.RemoveAwsCni.ValueBool()
+	}
+
+	removeKubeProxy := true
+	if !(model.RemoveKubeProxy.IsNull() || model.RemoveKubeProxy.IsUnknown()) {
+		removeKubeProxy = model.RemoveKubeProxy.ValueBool()
+	}
+
+	removeCoreDns := true
+	if !(model.RemoveCoreDns.IsNull() || model.RemoveCoreDns.IsUnknown()) {
+		removeCoreDns = model.RemoveCoreDns.ValueBool()
+	}
+
+	importCorednsToHelm := false
+	if !(model.ImportCorednsToHelm.IsNull() || model.ImportCorednsToHelm.IsUnknown()) {
+		importCorednsToHelm = model.ImportCorednsToHelm.ValueBool()
+	}
+
 	// Read kubernetes to populate model
 
 	awsCniDaemonsetExists, err := DaemonsetExist(ctx, clientSet, "kube-system", "aws-node")
@@ -745,7 +765,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	}
 	model.AwsCniDaemonsetExists = basetypes.NewBoolValue(awsCniDaemonsetExists)
 
-	model.RemoveAwsCni = basetypes.NewBoolValue(!(awsCniDaemonsetExists))
+	model.RemoveAwsCni = basetypes.NewBoolValue(removeAwsCni && !(awsCniDaemonsetExists))
 
 	kubeProxyDaemonsetExists, err := DaemonsetExist(ctx, clientSet, "kube-system", "kube-proxy")
 	if err != nil {
@@ -767,7 +787,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	}
 	model.KubeProxyConfigMapExists = basetypes.NewBoolValue(kubeProxyConfigMapExists)
 
-	model.RemoveKubeProxy = basetypes.NewBoolValue(!(kubeProxyDaemonsetExists && kubeProxyConfigMapExists))
+	model.RemoveKubeProxy = basetypes.NewBoolValue(removeKubeProxy && !(kubeProxyDaemonsetExists && kubeProxyConfigMapExists))
 
 	awsCoreDnsAwsDeploymentExists, err := DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
@@ -819,7 +839,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	}
 	model.AwsCoreDnsPodDisruptionBudgetExists = basetypes.NewBoolValue(awsCoreDnsPodDisruptionBudgetExists)
 
-	model.RemoveCoreDns = basetypes.NewBoolValue(!(awsCoreDnsAwsDeploymentExists && awsCoreDnsServiceExists && awsCoreDnsServiceAccountExists && awsCoreDnsConfigMapExists && awsCoreDnsPodDisruptionBudgetExists))
+	model.RemoveCoreDns = basetypes.NewBoolValue(removeCoreDns && !(awsCoreDnsAwsDeploymentExists && awsCoreDnsServiceExists && awsCoreDnsServiceAccountExists && awsCoreDnsConfigMapExists && awsCoreDnsPodDisruptionBudgetExists))
 
 	deploymentHelmReleaseNameAnnotationSet, deploymentHelmReleaseNamespaceAnnotationSet, deploymentManagedByLabelSet, deploymentAmazonManagedLabelRemoved, err := DeploymentImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
@@ -890,7 +910,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	model.CorednsPodDistruptionBudgetLabelManagedBySet = basetypes.NewBoolValue(podDistruptionBudgetManagedByLabelSet)
 	model.CorednsPodDistruptionBudgetLabelAmazonManagedRemoved = basetypes.NewBoolValue(podDistruptionBudgetAmazonManagedLabelRemoved)
 
-	model.ImportCorednsToHelm = basetypes.NewBoolValue(!(deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
+	model.ImportCorednsToHelm = basetypes.NewBoolValue(importCorednsToHelm && (deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
 
 	model.ID = basetypes.NewStringValue(r.provider.Host)
 
@@ -1153,7 +1173,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 	model.AwsCniDaemonsetExists = basetypes.NewBoolValue(awsCniDaemonsetExists)
 
-	model.RemoveAwsCni = basetypes.NewBoolValue(!(awsCniDaemonsetExists))
+	model.RemoveAwsCni = basetypes.NewBoolValue(removeAwsCni && !(awsCniDaemonsetExists))
 
 	kubeProxyDaemonsetExists, err := DaemonsetExist(ctx, clientSet, "kube-system", "kube-proxy")
 	if err != nil {
@@ -1175,7 +1195,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 	model.KubeProxyConfigMapExists = basetypes.NewBoolValue(kubeProxyConfigMapExists)
 
-	model.RemoveKubeProxy = basetypes.NewBoolValue(!(kubeProxyDaemonsetExists && kubeProxyConfigMapExists))
+	model.RemoveKubeProxy = basetypes.NewBoolValue(removeKubeProxy && !(kubeProxyDaemonsetExists && kubeProxyConfigMapExists))
 
 	awsCoreDnsAwsDeploymentExists, err := DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
@@ -1227,7 +1247,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 	model.AwsCoreDnsPodDisruptionBudgetExists = basetypes.NewBoolValue(awsCoreDnsPodDisruptionBudgetExists)
 
-	model.RemoveCoreDns = basetypes.NewBoolValue(!(awsCoreDnsAwsDeploymentExists && awsCoreDnsServiceExists && awsCoreDnsServiceAccountExists && awsCoreDnsConfigMapExists && awsCoreDnsPodDisruptionBudgetExists))
+	model.RemoveCoreDns = basetypes.NewBoolValue(removeCoreDns && !(awsCoreDnsAwsDeploymentExists && awsCoreDnsServiceExists && awsCoreDnsServiceAccountExists && awsCoreDnsConfigMapExists && awsCoreDnsPodDisruptionBudgetExists))
 
 	deploymentHelmReleaseNameAnnotationSet, deploymentHelmReleaseNamespaceAnnotationSet, deploymentManagedByLabelSet, deploymentAmazonManagedLabelRemoved, err := DeploymentImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
@@ -1298,7 +1318,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	model.CorednsPodDistruptionBudgetLabelManagedBySet = basetypes.NewBoolValue(podDistruptionBudgetManagedByLabelSet)
 	model.CorednsPodDistruptionBudgetLabelAmazonManagedRemoved = basetypes.NewBoolValue(podDistruptionBudgetAmazonManagedLabelRemoved)
 
-	model.ImportCorednsToHelm = basetypes.NewBoolValue(!(deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
+	model.ImportCorednsToHelm = basetypes.NewBoolValue(importCorednsToHelm && (deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
 
 	model.ID = basetypes.NewStringValue(r.provider.Host)
 
