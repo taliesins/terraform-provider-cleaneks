@@ -550,6 +550,8 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 	model.AwsCniDaemonsetExists = basetypes.NewBoolValue(awsCniDaemonsetExists)
 
+	model.RemoveAwsCni = basetypes.NewBoolValue(!(awsCniDaemonsetExists))
+
 	kubeProxyDaemonsetExists, err := DaemonsetExist(ctx, clientSet, "kube-system", "kube-proxy")
 	if err != nil {
 		res.Diagnostics.AddError(
@@ -569,6 +571,60 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 	model.KubeProxyConfigMapExists = basetypes.NewBoolValue(kubeProxyConfigMapExists)
+
+	model.RemoveKubeProxy = basetypes.NewBoolValue(!(kubeProxyDaemonsetExists && kubeProxyConfigMapExists))
+
+	awsCoreDnsAwsDeploymentExists, err := DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for CoreDNS deployment",
+			fmt.Sprintf("Error checking for Kube Proxy config map: %s", err),
+		)
+		return
+	}
+	model.AwsCoreDnsDeploymentExists = basetypes.NewBoolValue(awsCoreDnsAwsDeploymentExists)
+
+	awsCoreDnsServiceExists, err := ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for CoreDNS service",
+			fmt.Sprintf("Error checking for CoreDNS service: %s", err),
+		)
+		return
+	}
+	model.AwsCoreDnsServiceExists = basetypes.NewBoolValue(awsCoreDnsServiceExists)
+
+	awsCoreDnsServiceAccountExists, err := ServiceAccountExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for CoreDNS service account",
+			fmt.Sprintf("Error checking for CoreDNS service account: %s", err),
+		)
+		return
+	}
+	model.AwsCoreDnsServiceAccountExists = basetypes.NewBoolValue(awsCoreDnsServiceAccountExists)
+
+	awsCoreDnsConfigMapExists, err := ConfigMapExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for CoreDNS config map",
+			fmt.Sprintf("Error checking for CoreDNS config map: %s", err),
+		)
+		return
+	}
+	model.AwsCoreDnsConfigMapExists = basetypes.NewBoolValue(awsCoreDnsConfigMapExists)
+
+	awsCoreDnsPodDisruptionBudgetExists, err := PodDisruptionBudgetExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for CoreDNS pod disruption budget",
+			fmt.Sprintf("Error checking for CoreDNS pod disruption budget: %s", err),
+		)
+		return
+	}
+	model.AwsCoreDnsPodDisruptionBudgetExists = basetypes.NewBoolValue(awsCoreDnsPodDisruptionBudgetExists)
+
+	model.RemoveCoreDns = basetypes.NewBoolValue(!(awsCoreDnsAwsDeploymentExists && awsCoreDnsServiceExists && awsCoreDnsServiceAccountExists && awsCoreDnsConfigMapExists && awsCoreDnsPodDisruptionBudgetExists))
 
 	deploymentHelmReleaseNameAnnotationSet, deploymentHelmReleaseNamespaceAnnotationSet, deploymentManagedByLabelSet, deploymentAmazonManagedLabelRemoved, err := DeploymentImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
@@ -638,6 +694,8 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	model.CorednsPodDistruptionBudgetLabelHelmReleaseNamespaceSet = basetypes.NewBoolValue(podDistruptionBudgetHelmReleaseNamespaceAnnotationSet)
 	model.CorednsPodDistruptionBudgetLabelManagedBySet = basetypes.NewBoolValue(podDistruptionBudgetManagedByLabelSet)
 	model.CorednsPodDistruptionBudgetLabelAmazonManagedRemoved = basetypes.NewBoolValue(podDistruptionBudgetAmazonManagedLabelRemoved)
+
+	model.ImportCorednsToHelm = basetypes.NewBoolValue(!(deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
 
 	model.ID = basetypes.NewStringValue(r.provider.Host)
 
@@ -1093,6 +1151,8 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 	model.AwsCniDaemonsetExists = basetypes.NewBoolValue(awsCniDaemonsetExists)
 
+	model.RemoveAwsCni = basetypes.NewBoolValue(!(awsCniDaemonsetExists))
+
 	kubeProxyDaemonsetExists, err := DaemonsetExist(ctx, clientSet, "kube-system", "kube-proxy")
 	if err != nil {
 		res.Diagnostics.AddError(
@@ -1112,6 +1172,60 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 	model.KubeProxyConfigMapExists = basetypes.NewBoolValue(kubeProxyConfigMapExists)
+
+	model.RemoveKubeProxy = basetypes.NewBoolValue(!(kubeProxyDaemonsetExists && kubeProxyConfigMapExists))
+
+	awsCoreDnsAwsDeploymentExists, err := DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for CoreDNS deployment",
+			fmt.Sprintf("Error checking for Kube Proxy config map: %s", err),
+		)
+		return
+	}
+	model.AwsCoreDnsDeploymentExists = basetypes.NewBoolValue(awsCoreDnsAwsDeploymentExists)
+
+	awsCoreDnsServiceExists, err := ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for CoreDNS service",
+			fmt.Sprintf("Error checking for CoreDNS service: %s", err),
+		)
+		return
+	}
+	model.AwsCoreDnsServiceExists = basetypes.NewBoolValue(awsCoreDnsServiceExists)
+
+	awsCoreDnsServiceAccountExists, err := ServiceAccountExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for CoreDNS service account",
+			fmt.Sprintf("Error checking for CoreDNS service account: %s", err),
+		)
+		return
+	}
+	model.AwsCoreDnsServiceAccountExists = basetypes.NewBoolValue(awsCoreDnsServiceAccountExists)
+
+	awsCoreDnsConfigMapExists, err := ConfigMapExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for CoreDNS config map",
+			fmt.Sprintf("Error checking for CoreDNS config map: %s", err),
+		)
+		return
+	}
+	model.AwsCoreDnsConfigMapExists = basetypes.NewBoolValue(awsCoreDnsConfigMapExists)
+
+	awsCoreDnsPodDisruptionBudgetExists, err := PodDisruptionBudgetExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for CoreDNS pod disruption budget",
+			fmt.Sprintf("Error checking for CoreDNS pod disruption budget: %s", err),
+		)
+		return
+	}
+	model.AwsCoreDnsPodDisruptionBudgetExists = basetypes.NewBoolValue(awsCoreDnsPodDisruptionBudgetExists)
+
+	model.RemoveCoreDns = basetypes.NewBoolValue(!(awsCoreDnsAwsDeploymentExists && awsCoreDnsServiceExists && awsCoreDnsServiceAccountExists && awsCoreDnsConfigMapExists && awsCoreDnsPodDisruptionBudgetExists))
 
 	deploymentHelmReleaseNameAnnotationSet, deploymentHelmReleaseNamespaceAnnotationSet, deploymentManagedByLabelSet, deploymentAmazonManagedLabelRemoved, err := DeploymentImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
@@ -1181,6 +1295,8 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	model.CorednsPodDistruptionBudgetLabelHelmReleaseNamespaceSet = basetypes.NewBoolValue(podDistruptionBudgetHelmReleaseNamespaceAnnotationSet)
 	model.CorednsPodDistruptionBudgetLabelManagedBySet = basetypes.NewBoolValue(podDistruptionBudgetManagedByLabelSet)
 	model.CorednsPodDistruptionBudgetLabelAmazonManagedRemoved = basetypes.NewBoolValue(podDistruptionBudgetAmazonManagedLabelRemoved)
+
+	model.ImportCorednsToHelm = basetypes.NewBoolValue(!(deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
 
 	// Finally, set the state
 	tflog.Debug(ctx, "Storing job info into the state")
