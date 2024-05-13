@@ -353,13 +353,61 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		}
 
 		if removeCoreDns {
-			_, err = DeleteDeployment(ctx, clientSet, "kube-system", "coredns")
+			// We only want to delete the Amazon CoreDNS and not any further deployed versions
+			exists, err := DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
-					"Error removing CoreDNS deployment",
-					fmt.Sprintf("Error removing CoreDNS deployment: %s", err),
+					"Error removing CoreDNS",
+					fmt.Sprintf("Error removing CoreDNS: %s", err),
 				)
 				return
+			}
+
+			if exists {
+				_, err = DeleteDeployment(ctx, clientSet, "kube-system", "coredns")
+				if err != nil {
+					res.Diagnostics.AddError(
+						"Error removing CoreDNS deployment",
+						fmt.Sprintf("Error removing CoreDNS deployment: %s", err),
+					)
+					return
+				}
+
+				_, err = DeleteService(ctx, clientSet, "kube-system", "kube-dns")
+				if err != nil {
+					res.Diagnostics.AddError(
+						"Error removing CoreDNS service",
+						fmt.Sprintf("Error removing CoreDNS service: %s", err),
+					)
+					return
+				}
+
+				_, err = DeleteServiceAccount(ctx, clientSet, "kube-system", "kube-dns")
+				if err != nil {
+					res.Diagnostics.AddError(
+						"Error removing CoreDNS service account",
+						fmt.Sprintf("Error removing CoreDNS service account: %s", err),
+					)
+					return
+				}
+
+				_, err = DeleteConfigMap(ctx, clientSet, "kube-system", "coredns")
+				if err != nil {
+					res.Diagnostics.AddError(
+						"Error removing CoreDNS configmap",
+						fmt.Sprintf("Error removing CoreDNS configmap: %s", err),
+					)
+					return
+				}
+
+				_, err = DeletePodDisruptionBudget(ctx, clientSet, "kube-system", "kube-dns")
+				if err != nil {
+					res.Diagnostics.AddError(
+						"Error removing CoreDNS pod disruption budget",
+						fmt.Sprintf("Error removing CoreDNS pod disruption budget: %s", err),
+					)
+					return
+				}
 			}
 		}
 
@@ -761,6 +809,42 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 					res.Diagnostics.AddError(
 						"Error removing CoreDNS deployment",
 						fmt.Sprintf("Error removing CoreDNS deployment: %s", err),
+					)
+					return
+				}
+
+				_, err = DeleteService(ctx, clientSet, "kube-system", "kube-dns")
+				if err != nil {
+					res.Diagnostics.AddError(
+						"Error removing CoreDNS service",
+						fmt.Sprintf("Error removing CoreDNS service: %s", err),
+					)
+					return
+				}
+
+				_, err = DeleteServiceAccount(ctx, clientSet, "kube-system", "kube-dns")
+				if err != nil {
+					res.Diagnostics.AddError(
+						"Error removing CoreDNS service account",
+						fmt.Sprintf("Error removing CoreDNS service account: %s", err),
+					)
+					return
+				}
+
+				_, err = DeleteConfigMap(ctx, clientSet, "kube-system", "coredns")
+				if err != nil {
+					res.Diagnostics.AddError(
+						"Error removing CoreDNS config map",
+						fmt.Sprintf("Error removing CoreDNS config map: %s", err),
+					)
+					return
+				}
+
+				_, err = DeletePodDisruptionBudget(ctx, clientSet, "kube-system", "kube-dns")
+				if err != nil {
+					res.Diagnostics.AddError(
+						"Error removing CoreDNS pod disruption budget",
+						fmt.Sprintf("Error removing CoreDNS pod disruption budget: %s", err),
 					)
 					return
 				}
