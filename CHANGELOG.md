@@ -1,4 +1,10 @@
 
+<a name="v0.1.19"></a>
+## [v0.1.19](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.18...v0.1.19) (2024-05-13)
+
+### Fix
+- [65a9eec](https://github.com/taliesins/terraform-provider-cleaneks/commit/65a9eecdc10caec079b29819d3cac0e0390c1eac) Set model ID and read and update
+
 <a name="v0.1.18"></a>
 ## [v0.1.18](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.17...v0.1.18) (2024-05-13)
 
