@@ -892,6 +892,8 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 
 	model.ImportCorednsToHelm = basetypes.NewBoolValue(!(deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
 
+	model.ID = basetypes.NewStringValue(r.provider.Host)
+
 	// Finally, set the state
 	tflog.Debug(ctx, "Storing job info into the state")
 	res.Diagnostics.Append(res.State.Set(ctx, model)...)
@@ -1297,6 +1299,8 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	model.CorednsPodDistruptionBudgetLabelAmazonManagedRemoved = basetypes.NewBoolValue(podDistruptionBudgetAmazonManagedLabelRemoved)
 
 	model.ImportCorednsToHelm = basetypes.NewBoolValue(!(deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
+
+	model.ID = basetypes.NewStringValue(r.provider.Host)
 
 	// Finally, set the state
 	tflog.Debug(ctx, "Storing job info into the state")
