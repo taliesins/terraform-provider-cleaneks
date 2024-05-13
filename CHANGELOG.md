@@ -1,4 +1,10 @@
 
+<a name="v0.1.14"></a>
+## [v0.1.14](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.13...v0.1.14) (2024-05-13)
+
+### Fix
+- [f0549ad](https://github.com/taliesins/terraform-provider-cleaneks/commit/f0549adb52dbf4fd6adfac6cfc2a15b1b46aac46) Remove CoreDNS fully
+
 <a name="v0.1.13"></a>
 ## [v0.1.13](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.12...v0.1.13) (2024-05-10)
 
