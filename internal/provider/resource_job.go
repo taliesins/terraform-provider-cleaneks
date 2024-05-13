@@ -687,6 +687,8 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	}
 	model.AwsCniDaemonsetExists = basetypes.NewBoolValue(awsCniDaemonsetExists)
 
+	model.RemoveAwsCni = basetypes.NewBoolValue(!(awsCniDaemonsetExists))
+
 	kubeProxyDaemonsetExists, err := DaemonsetExist(ctx, clientSet, "kube-system", "kube-proxy")
 	if err != nil {
 		res.Diagnostics.AddError(
@@ -706,6 +708,8 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 		return
 	}
 	model.KubeProxyConfigMapExists = basetypes.NewBoolValue(kubeProxyConfigMapExists)
+
+	model.RemoveKubeProxy = basetypes.NewBoolValue(!(kubeProxyDaemonsetExists && kubeProxyConfigMapExists))
 
 	awsCoreDnsAwsDeploymentExists, err := DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
@@ -756,6 +760,8 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 		return
 	}
 	model.AwsCoreDnsPodDisruptionBudgetExists = basetypes.NewBoolValue(awsCoreDnsPodDisruptionBudgetExists)
+
+	model.RemoveCoreDns = basetypes.NewBoolValue(!(awsCoreDnsAwsDeploymentExists && awsCoreDnsServiceExists && awsCoreDnsServiceAccountExists && awsCoreDnsConfigMapExists && awsCoreDnsPodDisruptionBudgetExists))
 
 	deploymentHelmReleaseNameAnnotationSet, deploymentHelmReleaseNamespaceAnnotationSet, deploymentManagedByLabelSet, deploymentAmazonManagedLabelRemoved, err := DeploymentImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
@@ -825,6 +831,8 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	model.CorednsPodDistruptionBudgetLabelHelmReleaseNamespaceSet = basetypes.NewBoolValue(podDistruptionBudgetHelmReleaseNamespaceAnnotationSet)
 	model.CorednsPodDistruptionBudgetLabelManagedBySet = basetypes.NewBoolValue(podDistruptionBudgetManagedByLabelSet)
 	model.CorednsPodDistruptionBudgetLabelAmazonManagedRemoved = basetypes.NewBoolValue(podDistruptionBudgetAmazonManagedLabelRemoved)
+
+	model.ImportCorednsToHelm = basetypes.NewBoolValue(!(deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
 
 	// Finally, set the state
 	tflog.Debug(ctx, "Storing job info into the state")
