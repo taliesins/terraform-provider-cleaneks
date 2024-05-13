@@ -37,6 +37,12 @@ type JobResourceModel struct {
 	KubeProxyDaemonsetExists types.Bool `tfsdk:"kube_proxy_daemonset_exists"`
 	KubeProxyConfigMapExists types.Bool `tfsdk:"kube_proxy_config_map_exists"`
 
+	AwsCoreDnsDeploymentExists          types.Bool `tfsdk:"aws_coredns_deployment_exists"`
+	AwsCoreDnsServiceExists             types.Bool `tfsdk:"aws_coredns_service_exists"`
+	AwsCoreDnsServiceAccountExists      types.Bool `tfsdk:"aws_coredns_service_account_exists"`
+	AwsCoreDnsConfigMapExists           types.Bool `tfsdk:"aws_coredns_config_map_exists"`
+	AwsCoreDnsPodDisruptionBudgetExists types.Bool `tfsdk:"aws_coredns_pod_disruption_budget_exists"`
+
 	CorednsDeploymentLabelHelmReleaseNameSet      types.Bool `tfsdk:"coredns_deployment_label_helm_release_name_set"`
 	CorednsDeploymentLabelHelmReleaseNamespaceSet types.Bool `tfsdk:"coredns_deployment_label_helm_release_namespace_set"`
 	CorednsDeploymentLabelManagedBySet            types.Bool `tfsdk:"coredns_deployment_label_managed_by_set"`
@@ -124,6 +130,36 @@ func (r *JobResource) Schema(_ context.Context, req resource.SchemaRequest, resp
 			"kube_proxy_config_map_exists": schema.BoolAttribute{
 				MarkdownDescription: "Does **Kube-Proxy** config map exist.",
 				Description:         "Does Kube-Proxy config map exist.",
+				Computed:            true,
+			},
+
+			"aws_coredns_deployment_exists": schema.BoolAttribute{
+				MarkdownDescription: "Does **AWS CoreDNS** deployment exist.",
+				Description:         "Does AWS CoreDNS deployment exist.",
+				Computed:            true,
+			},
+
+			"aws_coredns_service_exists": schema.BoolAttribute{
+				MarkdownDescription: "Does **AWS CoreDNS** service exist.",
+				Description:         "Does AWS CoreDNS service exist.",
+				Computed:            true,
+			},
+
+			"aws_coredns_service_account_exists": schema.BoolAttribute{
+				MarkdownDescription: "Does **AWS CoreDNS** service account exist.",
+				Description:         "Does AWS CoreDNS service account exist.",
+				Computed:            true,
+			},
+
+			"aws_coredns_config_map_exists": schema.BoolAttribute{
+				MarkdownDescription: "Does **AWS CoreDNS** config map exist.",
+				Description:         "Does AWS CoreDNS config map exist.",
+				Computed:            true,
+			},
+
+			"aws_coredns_pod_disruption_budget_exists": schema.BoolAttribute{
+				MarkdownDescription: "Does **AWS CoreDNS** pod disruption budget exist.",
+				Description:         "Does AWS CoreDNS pod disruption budget exist.",
 				Computed:            true,
 			},
 
@@ -670,6 +706,56 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 		return
 	}
 	model.KubeProxyConfigMapExists = basetypes.NewBoolValue(kubeProxyConfigMapExists)
+
+	awsCoreDnsAwsDeploymentExists, err := DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for CoreDNS deployment",
+			fmt.Sprintf("Error checking for Kube Proxy config map: %s", err),
+		)
+		return
+	}
+	model.AwsCoreDnsDeploymentExists = basetypes.NewBoolValue(awsCoreDnsAwsDeploymentExists)
+
+	awsCoreDnsServiceExists, err := ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for CoreDNS service",
+			fmt.Sprintf("Error checking for CoreDNS service: %s", err),
+		)
+		return
+	}
+	model.AwsCoreDnsServiceExists = basetypes.NewBoolValue(awsCoreDnsServiceExists)
+
+	awsCoreDnsServiceAccountExists, err := ServiceAccountExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for CoreDNS service account",
+			fmt.Sprintf("Error checking for CoreDNS service account: %s", err),
+		)
+		return
+	}
+	model.AwsCoreDnsServiceAccountExists = basetypes.NewBoolValue(awsCoreDnsServiceAccountExists)
+
+	awsCoreDnsConfigMapExists, err := ConfigMapExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for CoreDNS config map",
+			fmt.Sprintf("Error checking for CoreDNS config map: %s", err),
+		)
+		return
+	}
+	model.AwsCoreDnsConfigMapExists = basetypes.NewBoolValue(awsCoreDnsConfigMapExists)
+
+	awsCoreDnsPodDisruptionBudgetExists, err := PodDisruptionBudgetExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking for CoreDNS pod disruption budget",
+			fmt.Sprintf("Error checking for CoreDNS pod disruption budget: %s", err),
+		)
+		return
+	}
+	model.AwsCoreDnsPodDisruptionBudgetExists = basetypes.NewBoolValue(awsCoreDnsPodDisruptionBudgetExists)
 
 	deploymentHelmReleaseNameAnnotationSet, deploymentHelmReleaseNamespaceAnnotationSet, deploymentManagedByLabelSet, deploymentAmazonManagedLabelRemoved, err := DeploymentImportedIntoHelm(ctx, clientSet, "kube-system", "coredns")
 	if err != nil {
