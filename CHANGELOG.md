@@ -1,4 +1,10 @@
 
+<a name="v0.1.20"></a>
+## [v0.1.20](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.19...v0.1.20) (2024-05-13)
+
+### Fix
+- [fe19fb2](https://github.com/taliesins/terraform-provider-cleaneks/commit/fe19fb25439975a839c23224b0b3bfdc60adc5a1) Only evaluate it if we want to enable the functionality
+
 <a name="v0.1.19"></a>
 ## [v0.1.19](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.18...v0.1.19) (2024-05-13)
 
