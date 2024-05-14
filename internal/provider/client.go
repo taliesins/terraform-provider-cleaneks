@@ -47,7 +47,7 @@ func DaemonsetExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.Clien
 			return false, nil
 		}
 
-		_, ok := deployment.Annotations[amazonManagedLabelName]
+		_, ok := deployment.Labels[amazonManagedLabelName]
 		return ok, nil
 	}
 }
@@ -88,7 +88,7 @@ func DeploymentExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.Clie
 			return false, nil
 		}
 
-		_, ok := deployment.Annotations[amazonManagedLabelName]
+		_, ok := deployment.Labels[amazonManagedLabelName]
 		return ok, nil
 	}
 }
@@ -129,7 +129,7 @@ func ServiceExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.Clients
 			return false, nil
 		}
 
-		_, ok := deployment.Annotations[amazonManagedLabelName]
+		_, ok := deployment.Labels[amazonManagedLabelName]
 		return ok, nil
 	}
 }
@@ -170,7 +170,7 @@ func ServiceAccountExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.
 			return false, nil
 		}
 
-		_, ok := deployment.Annotations[amazonManagedLabelName]
+		_, ok := deployment.Labels[amazonManagedLabelName]
 		return ok, nil
 	}
 }
@@ -211,7 +211,7 @@ func ConfigMapExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.Clien
 			return false, nil
 		}
 
-		_, ok := deployment.Annotations[amazonManagedLabelName]
+		_, ok := deployment.Labels[amazonManagedLabelName]
 		return ok, nil
 	}
 }
@@ -252,7 +252,7 @@ func PodDisruptionBudgetExistsAndIsAwsOne(ctx context.Context, clientset *kubern
 			return false, nil
 		}
 
-		_, ok := deployment.Annotations[amazonManagedLabelName]
+		_, ok := deployment.Labels[amazonManagedLabelName]
 		return ok, nil
 	}
 }
@@ -307,7 +307,7 @@ func DeploymentImportedIntoHelm(ctx context.Context, clientset *kubernetes.Clien
 		managedByLabelSet = true
 	}
 
-	_, ok = deployment.Annotations[amazonManagedLabelName]
+	_, ok = deployment.Labels[amazonManagedLabelName]
 	if !ok {
 		amazonManagedLabelRemoved = true
 	}
@@ -353,7 +353,7 @@ func ServiceImportedIntoHelm(ctx context.Context, clientset *kubernetes.Clientse
 		managedByLabelSet = true
 	}
 
-	_, ok = service.Annotations[amazonManagedLabelName]
+	_, ok = service.Labels[amazonManagedLabelName]
 	if !ok {
 		amazonManagedLabelRemoved = true
 	}
@@ -399,7 +399,7 @@ func ServiceAccountImportedIntoHelm(ctx context.Context, clientset *kubernetes.C
 		managedByLabelSet = true
 	}
 
-	_, ok = serviceAccount.Annotations[amazonManagedLabelName]
+	_, ok = serviceAccount.Labels[amazonManagedLabelName]
 	if !ok {
 		amazonManagedLabelRemoved = true
 	}
@@ -445,7 +445,7 @@ func PodDisruptionBudgetImportedIntoHelm(ctx context.Context, clientset *kuberne
 		managedByLabelSet = true
 	}
 
-	_, ok = podDisruptionBudget.Annotations[amazonManagedLabelName]
+	_, ok = podDisruptionBudget.Labels[amazonManagedLabelName]
 	if !ok {
 		amazonManagedLabelRemoved = true
 	}
