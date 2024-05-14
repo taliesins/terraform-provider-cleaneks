@@ -1,4 +1,10 @@
 
+<a name="v0.1.21"></a>
+## [v0.1.21](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.20...v0.1.21) (2024-05-14)
+
+### Fix
+- [9c32723](https://github.com/taliesins/terraform-provider-cleaneks/commit/9c32723e4f4379b1066c843866ad6a834f9ef8e8) Its a label and not an annotation
+
 <a name="v0.1.20"></a>
 ## [v0.1.20](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.19...v0.1.20) (2024-05-13)
 
