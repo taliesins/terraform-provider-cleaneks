@@ -88,5 +88,5 @@ Required:
 Optional:
 
 - `api_version` (String) The client authentication api Version to use
-- `args` (List of List of String) Arguments to pass to the command
-- `env` (Map of List of String) Environment variables to set for the command
+- `args` (List of String) Arguments to pass to the command
+- `env` (Map of String) Environment variables to set for the command

@@ -148,7 +148,7 @@ func (p *CleanEksProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 				Default: EnvDefaultString("KUBE_CLUSTER_CA_CERT_DATA", ""),
 			},
 
-			"config_paths": resourceSchema.ListAttribute{
+			"config_paths": providerSchema.ListAttribute{
 				MarkdownDescription: "A list of paths to kube config files. Can be set with `KUBE_CONFIG_PATHS` environment variable.",
 				Description:         "A list of paths to kube config files. Can be set with KUBE_CONFIG_PATHS environment variable.",
 				Optional:            true,
@@ -233,9 +233,7 @@ func (p *CleanEksProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 						"env": resourceSchema.MapAttribute{
 							Description: "Environment variables to set for the command",
 							Optional:    true,
-							ElementType: types.ListType{
-								ElemType: types.StringType,
-							},
+							ElementType: types.StringType,
 						},
 						"command": resourceSchema.StringAttribute{
 							Description: "Command to execute",
@@ -244,9 +242,7 @@ func (p *CleanEksProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 						"args": resourceSchema.ListAttribute{
 							Description: "Arguments to pass to the command",
 							Optional:    true,
-							ElementType: types.ListType{
-								ElemType: types.StringType,
-							},
+							ElementType: types.StringType,
 						},
 					},
 				},
