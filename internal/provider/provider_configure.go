@@ -163,9 +163,13 @@ func newKubernetesClientConfig(ctx context.Context, data CleanEksProviderModel) 
 		exec.InteractiveMode = clientcmdapi.IfAvailableExecInteractiveMode
 		exec.APIVersion = execData.APIVersion.ValueString()
 		exec.Command = execData.Command.ValueString()
-		exec.Args = execData.Args
-		for kk, vv := range execData.Env {
-			exec.Env = append(exec.Env, clientcmdapi.ExecEnvVar{Name: kk, Value: vv})
+		if execData.Args != nil {
+			exec.Args = append(exec.Args, execData.Args...)
+		}
+		if execData.Env != nil {
+			for kk, vv := range execData.Env {
+				exec.Env = append(exec.Env, clientcmdapi.ExecEnvVar{Name: kk, Value: vv})
+			}
 		}
 
 		overrides.AuthInfo.Exec = exec
