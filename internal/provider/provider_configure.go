@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/mitchellh/go-homedir"
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -81,7 +80,7 @@ func newKubernetesClientConfig(ctx context.Context, data CleanEksProviderModel) 
 		configPaths = []string{v}
 	} else if len(data.ConfigPaths) > 0 {
 		for _, p := range data.ConfigPaths {
-			configPaths = append(configPaths, p.ValueString())
+			configPaths = append(configPaths, p)
 		}
 	} else if v := os.Getenv("KUBE_CONFIG_PATHS"); v != "" {
 		configPaths = filepath.SplitList(v)
@@ -166,9 +165,9 @@ func newKubernetesClientConfig(ctx context.Context, data CleanEksProviderModel) 
 		exec.InteractiveMode = clientcmdapi.IfAvailableExecInteractiveMode
 		exec.APIVersion = execData.APIVersion.ValueString()
 		exec.Command = execData.Command.ValueString()
-		exec.Args = expandStringSlice(execData.Args)
+		exec.Args = execData.Args
 		for kk, vv := range execData.Env {
-			exec.Env = append(exec.Env, clientcmdapi.ExecEnvVar{Name: kk, Value: vv.ValueString()})
+			exec.Env = append(exec.Env, clientcmdapi.ExecEnvVar{Name: kk, Value: vv})
 		}
 
 		overrides.AuthInfo.Exec = exec
@@ -183,12 +182,4 @@ func newKubernetesClientConfig(ctx context.Context, data CleanEksProviderModel) 
 		return nil, err
 	}
 	return cfg, nil
-}
-
-func expandStringSlice(s []types.String) []string {
-	v := []string{}
-	for _, vv := range s {
-		v = append(v, vv.ValueString())
-	}
-	return v
 }

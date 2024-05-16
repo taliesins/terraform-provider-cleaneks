@@ -38,26 +38,26 @@ type CleanEksProvider struct {
 }
 
 type CleanEksProviderModel struct {
-	Host                  types.String   `tfsdk:"host"`
-	Username              types.String   `tfsdk:"username"`
-	Password              types.String   `tfsdk:"password"`
-	Insecure              types.Bool     `tfsdk:"insecure"`
-	TLSServerName         types.String   `tfsdk:"tls_server_name"`
-	ClientCertificate     types.String   `tfsdk:"client_certificate"`
-	ClientKey             types.String   `tfsdk:"client_key"`
-	ClusterCACertificate  types.String   `tfsdk:"cluster_ca_certificate"`
-	ConfigPaths           []types.String `tfsdk:"config_paths"`
-	ConfigPath            types.String   `tfsdk:"config_path"`
-	ConfigContext         types.String   `tfsdk:"config_context"`
-	ConfigContextAuthInfo types.String   `tfsdk:"config_context_auth_info"`
-	ConfigContextCluster  types.String   `tfsdk:"config_context_cluster"`
-	Token                 types.String   `tfsdk:"token"`
-	ProxyURL              types.String   `tfsdk:"proxy_url"`
+	Host                  types.String `tfsdk:"host"`
+	Username              types.String `tfsdk:"username"`
+	Password              types.String `tfsdk:"password"`
+	Insecure              types.Bool   `tfsdk:"insecure"`
+	TLSServerName         types.String `tfsdk:"tls_server_name"`
+	ClientCertificate     types.String `tfsdk:"client_certificate"`
+	ClientKey             types.String `tfsdk:"client_key"`
+	ClusterCACertificate  types.String `tfsdk:"cluster_ca_certificate"`
+	ConfigPaths           []string     `tfsdk:"config_paths"`
+	ConfigPath            types.String `tfsdk:"config_path"`
+	ConfigContext         types.String `tfsdk:"config_context"`
+	ConfigContextAuthInfo types.String `tfsdk:"config_context_auth_info"`
+	ConfigContextCluster  types.String `tfsdk:"config_context_cluster"`
+	Token                 types.String `tfsdk:"token"`
+	ProxyURL              types.String `tfsdk:"proxy_url"`
 	Exec                  []struct {
-		APIVersion types.String            `tfsdk:"api_version"`
-		Command    types.String            `tfsdk:"command"`
-		Env        map[string]types.String `tfsdk:"env"`
-		Args       []types.String          `tfsdk:"args"`
+		APIVersion types.String      `tfsdk:"api_version"`
+		Command    types.String      `tfsdk:"command"`
+		Env        map[string]string `tfsdk:"env"`
+		Args       []string          `tfsdk:"args"`
 	} `tfsdk:"exec"`
 	BurstLimit types.Int64 `tfsdk:"burst_limit"`
 }
