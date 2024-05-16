@@ -77,10 +77,13 @@ func newKubernetesClientConfig(ctx context.Context, data CleanEksProviderModel) 
 
 	configPaths := []string{}
 	if v := data.ConfigPath.ValueString(); v != "" {
+		tflog.Debug(ctx, "Using provided config path")
 		configPaths = []string{v}
 	} else if len(data.ConfigPaths) > 0 {
+		tflog.Debug(ctx, "Using provided config paths")
 		configPaths = append(configPaths, data.ConfigPaths...)
 	} else if v := os.Getenv("KUBE_CONFIG_PATHS"); v != "" {
+		tflog.Debug(ctx, "Using KUBE_CONFIG_PATHS env variable")
 		configPaths = filepath.SplitList(v)
 	}
 
@@ -132,6 +135,10 @@ func newKubernetesClientConfig(ctx context.Context, data CleanEksProviderModel) 
 	overrides.ClusterInfo.TLSServerName = data.TLSServerName.ValueString()
 	overrides.ClusterInfo.CertificateAuthorityData = bytes.NewBufferString(data.ClusterCACertificate.ValueString()).Bytes()
 	overrides.AuthInfo.ClientCertificateData = bytes.NewBufferString(data.ClientCertificate.ValueString()).Bytes()
+	overrides.AuthInfo.ClientKeyData = bytes.NewBufferString(data.ClientKey.ValueString()).Bytes()
+	if len(overrides.AuthInfo.ClientCertificateData) > 0 || len(overrides.AuthInfo.ClientKeyData) > 0 {
+		tflog.Debug(ctx, "Using certificate for authentication")
+	}
 
 	if v := data.Host.ValueString(); v != "" {
 		// Server has to be the complete address of the kubernetes cluster (scheme://hostname:port), not just the hostname,
@@ -151,8 +158,14 @@ func newKubernetesClientConfig(ctx context.Context, data CleanEksProviderModel) 
 
 	overrides.AuthInfo.Username = data.Username.ValueString()
 	overrides.AuthInfo.Password = data.Password.ValueString()
-	overrides.AuthInfo.ClientKeyData = bytes.NewBufferString(data.ClientKey.ValueString()).Bytes()
+	if overrides.AuthInfo.Username != "" || overrides.AuthInfo.Password != "" {
+		tflog.Debug(ctx, "Using username/password for authentication")
+	}
+
 	overrides.AuthInfo.Token = data.Token.ValueString()
+	if overrides.AuthInfo.Token != "" {
+		tflog.Debug(ctx, "Using token for authentication")
+	}
 
 	overrides.ClusterDefaults.ProxyURL = data.ProxyURL.ValueString()
 
@@ -163,16 +176,23 @@ func newKubernetesClientConfig(ctx context.Context, data CleanEksProviderModel) 
 		exec.InteractiveMode = clientcmdapi.IfAvailableExecInteractiveMode
 		exec.APIVersion = execData.APIVersion.ValueString()
 		exec.Command = execData.Command.ValueString()
+
 		if execData.Args != nil {
 			exec.Args = append(exec.Args, execData.Args...)
 		}
 		if execData.Env != nil {
-			for kk, vv := range execData.Env {
-				exec.Env = append(exec.Env, clientcmdapi.ExecEnvVar{Name: kk, Value: vv})
+			for environmentVariableName, environmentVariableValue := range execData.Env {
+				exec.Env = append(exec.Env, clientcmdapi.ExecEnvVar{Name: environmentVariableName, Value: environmentVariableValue})
 			}
 		}
 
 		overrides.AuthInfo.Exec = exec
+		if overrides.AuthInfo.Exec != nil {
+			tflog.Debug(ctx, "Using exec for authentication: %s", map[string]interface{}{
+				"APIVersion": overrides.AuthInfo.Exec.APIVersion,
+				"Command":    overrides.AuthInfo.Exec.Command,
+			})
+		}
 	}
 
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
