@@ -79,9 +79,7 @@ func newKubernetesClientConfig(ctx context.Context, data CleanEksProviderModel) 
 	if v := data.ConfigPath.ValueString(); v != "" {
 		configPaths = []string{v}
 	} else if len(data.ConfigPaths) > 0 {
-		for _, p := range data.ConfigPaths {
-			configPaths = append(configPaths, p)
-		}
+		configPaths = append(configPaths, data.ConfigPaths...)
 	} else if v := os.Getenv("KUBE_CONFIG_PATHS"); v != "" {
 		configPaths = filepath.SplitList(v)
 	}
