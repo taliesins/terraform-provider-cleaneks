@@ -1,4 +1,10 @@
 
+<a name="v0.1.24"></a>
+## [v0.1.24](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.23...v0.1.24) (2024-05-16)
+
+### Fix
+- [2037260](https://github.com/taliesins/terraform-provider-cleaneks/commit/203726076d5c8ecf428a7027f204eadcea584010) use correct types
+
 <a name="v0.1.23"></a>
 ## [v0.1.23](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.22...v0.1.23) (2024-05-16)
 
