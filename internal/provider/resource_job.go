@@ -330,8 +330,8 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	clientSet, err := cleanEksProviderResourceData.GetClientSet(ctx)
 	if err != nil {
 		res.Diagnostics.AddError(
-			"Error getting Kubernetes client",
-			fmt.Sprintf("Error getting Kubernetes client: %s", err),
+			"Error getting Kubernetes client during JobResource.Create",
+			fmt.Sprintf("Error getting Kubernetes client during JobResource.Create: %s", err),
 		)
 		return
 	}
@@ -727,8 +727,8 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	clientSet, err := cleanEksProviderResourceData.GetClientSet(ctx)
 	if err != nil {
 		res.Diagnostics.AddError(
-			"Error getting Kubernetes client",
-			fmt.Sprintf("Error getting Kubernetes client: %s", err),
+			"Error getting Kubernetes client during JobResource.Read",
+			fmt.Sprintf("Error getting Kubernetes client during JobResource.Read: %s", err),
 		)
 		return
 	}
@@ -944,8 +944,8 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	clientSet, err := cleanEksProviderResourceData.GetClientSet(ctx)
 	if err != nil {
 		res.Diagnostics.AddError(
-			"Error getting Kubernetes client",
-			fmt.Sprintf("Error getting Kubernetes client: %s", err),
+			"Error getting Kubernetes client during JobResource.Update",
+			fmt.Sprintf("Error getting Kubernetes client during JobResource.Update: %s", err),
 		)
 		return
 	}
