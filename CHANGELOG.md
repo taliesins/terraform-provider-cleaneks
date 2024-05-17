@@ -1,4 +1,10 @@
 
+<a name="v0.1.26"></a>
+## [v0.1.26](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.25...v0.1.26) (2024-05-17)
+
+### Fix
+- [a65f71b](https://github.com/taliesins/terraform-provider-cleaneks/commit/a65f71bf7b77b0d9cbeddcd135b5ed3f7c284f2f) Make it easier to show where the error message is happening
+
 <a name="v0.1.25"></a>
 ## [v0.1.25](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.24...v0.1.25) (2024-05-16)
 
