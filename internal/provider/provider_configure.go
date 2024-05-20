@@ -65,8 +65,8 @@ func (p *CleanEksProvider) Configure(ctx context.Context, req provider.Configure
 	resp.DataSourceData = p
 	resp.ResourceData = p
 
-	tflog.Debug(ctx, "Provider configuration", map[string]interface{}{
-		"provider": fmt.Sprintf("%+v", p),
+	tflog.Debug(ctx, "Loaded provider configuration during Provider.Configuration", map[string]interface{}{
+		"providerConfig": fmt.Sprintf("%+v", p),
 	})
 }
 
