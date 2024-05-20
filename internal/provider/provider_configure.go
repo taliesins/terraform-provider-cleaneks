@@ -3,6 +3,7 @@ package provider
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/mitchellh/go-homedir"
 	apimachineryschema "k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -38,28 +38,27 @@ func (p *CleanEksProvider) Configure(ctx context.Context, req provider.Configure
 		burstLimit = model.BurstLimit.ValueInt64()
 	}
 
-	var clientSet *kubernetes.Clientset
-	restConfig, err := newKubernetesClientConfig(ctx, model)
-	if err != nil {
-		// We don't want to throw error here as we EKS cluster might not exist yet
-		resp.Diagnostics.Append(diag.NewWarningDiagnostic("failed to initialize Kubernetes client configuration, this could be because credentials are not available during provider initialization", err.Error()))
-	} else {
-		clientSet, err = kubernetes.NewForConfig(restConfig)
-		if err != nil {
-			resp.Diagnostics.AddError(
-				"Error creating Kubernetes client",
-				fmt.Sprintf("Error creating Kubernetes client: %s", err),
-			)
-			return
-		}
-	}
-
-	////////////////////////////////////////////////
 	p.model = model
-	p.clientSet = clientSet
-
 	p.Host = host
 	p.BurstLimit = burstLimit
+
+	if p.clientSet == nil {
+		clientSet, err := p.GetClientSet(ctx)
+		if err != nil {
+			if errors.Is(err, clientcmd.ErrEmptyConfig) {
+				// We don't want to throw error here as we EKS cluster might not exist yet
+				resp.Diagnostics.Append(diag.NewWarningDiagnostic("Invalid provider configuration was supplied. Provider operations likely to fail. Failed to initialize Kubernetes client configuration, this could be because credentials are not available during provider initialization", err.Error()))
+			} else {
+				resp.Diagnostics.AddError(
+					"Error getting Kubernetes client during JobResource.Configure",
+					fmt.Sprintf("Error getting Kubernetes client during JobResource.Configure: %s", err),
+				)
+				return
+			}
+		} else {
+			p.clientSet = clientSet
+		}
+	}
 
 	// Since the provider instance is being passed, ensure these response
 	// values are always set before early returns, etc.
@@ -197,10 +196,8 @@ func newKubernetesClientConfig(ctx context.Context, data CleanEksProviderModel) 
 
 	cc := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loader, overrides)
 	cfg, err := cc.ClientConfig()
+
 	if err != nil {
-		tflog.Warn(ctx, "Invalid provider configuration was supplied. Provider operations likely to fail", map[string]interface{}{
-			"error": err.Error(),
-		})
 		return nil, err
 	}
 	return cfg, nil

@@ -327,13 +327,19 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	clientSet, err := cleanEksProviderResourceData.GetClientSet(ctx)
-	if err != nil {
-		res.Diagnostics.AddError(
-			"Error getting Kubernetes client during JobResource.Create",
-			fmt.Sprintf("Error getting Kubernetes client during JobResource.Create: %s", err),
-		)
-		return
+	var err error
+
+	clientSet := cleanEksProviderResourceData.clientSet
+	if clientSet == nil {
+		clientSet, err = cleanEksProviderResourceData.GetClientSet(ctx)
+		if err != nil {
+			res.Diagnostics.AddError(
+				"Error getting Kubernetes client during JobResource.Create",
+				fmt.Sprintf("Error getting Kubernetes client during JobResource.Create: %s", err),
+			)
+			return
+		}
+		cleanEksProviderResourceData.clientSet = clientSet
 	}
 
 	removeAwsCni := true
@@ -724,13 +730,19 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 		return
 	}
 
-	clientSet, err := cleanEksProviderResourceData.GetClientSet(ctx)
-	if err != nil {
-		res.Diagnostics.AddError(
-			"Error getting Kubernetes client during JobResource.Read",
-			fmt.Sprintf("Error getting Kubernetes client during JobResource.Read: %s", err),
-		)
-		return
+	var err error
+
+	clientSet := cleanEksProviderResourceData.clientSet
+	if clientSet == nil {
+		clientSet, err = cleanEksProviderResourceData.GetClientSet(ctx)
+		if err != nil {
+			res.Diagnostics.AddError(
+				"Error getting Kubernetes client during JobResource.Read",
+				fmt.Sprintf("Error getting Kubernetes client during JobResource.Read: %s", err),
+			)
+			return
+		}
+		cleanEksProviderResourceData.clientSet = clientSet
 	}
 
 	removeAwsCni := true
@@ -941,13 +953,19 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
-	clientSet, err := cleanEksProviderResourceData.GetClientSet(ctx)
-	if err != nil {
-		res.Diagnostics.AddError(
-			"Error getting Kubernetes client during JobResource.Update",
-			fmt.Sprintf("Error getting Kubernetes client during JobResource.Update: %s", err),
-		)
-		return
+	var err error
+
+	clientSet := cleanEksProviderResourceData.clientSet
+	if clientSet == nil {
+		clientSet, err = cleanEksProviderResourceData.GetClientSet(ctx)
+		if err != nil {
+			res.Diagnostics.AddError(
+				"Error getting Kubernetes client during JobResource.Update",
+				fmt.Sprintf("Error getting Kubernetes client during JobResource.Update: %s", err),
+			)
+			return
+		}
+		cleanEksProviderResourceData.clientSet = clientSet
 	}
 
 	removeAwsCni := true
