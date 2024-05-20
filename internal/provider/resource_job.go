@@ -336,6 +336,10 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		r.provider.model.Host = model.ID
 	}
 
+	if r.provider.model.ClientCertificate.IsUnknown() && r.provider.model.Insecure.IsUnknown() {
+		r.provider.model.Insecure = types.BoolValue(true)
+	}
+
 	execCommand := ""
 	execArgs := []string{}
 	execEnv := map[string]string{}
@@ -778,6 +782,10 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 		r.provider.model.Host = model.ID
 	}
 
+	if r.provider.model.ClientCertificate.IsUnknown() && r.provider.model.Insecure.IsUnknown() {
+		r.provider.model.Insecure = types.BoolValue(true)
+	}
+
 	execCommand := ""
 	execArgs := []string{}
 	execEnv := map[string]string{}
@@ -1046,6 +1054,10 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	if r.provider.model.Host.IsUnknown() && !(model.ID.IsUnknown() || model.ID.IsNull()) {
 		r.provider.model.Host = model.ID
+	}
+
+	if r.provider.model.ClientCertificate.IsUnknown() && r.provider.model.Insecure.IsUnknown() {
+		r.provider.model.Insecure = types.BoolValue(true)
 	}
 
 	execCommand := ""
