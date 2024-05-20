@@ -288,5 +288,8 @@ func (p *CleanEksProvider) GetClientSet(ctx context.Context) (*kubernetes.Client
 			return nil, err
 		}
 	}
+
+	p.clientSet = clientSet
+
 	return clientSet, nil
 }
