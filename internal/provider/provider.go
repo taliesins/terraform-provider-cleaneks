@@ -25,14 +25,10 @@ var _ provider.Provider = &CleanEksProvider{}
 var _ provider.ProviderWithFunctions = &CleanEksProvider{}
 
 type CleanEksProvider struct {
-	Host string
-
-	BurstLimit int64
 	// Version is set to the provider Version on release, "dev" when the
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
-	Version string
-
+	Version   string
 	clientSet *kubernetes.Clientset
 	model     CleanEksProviderModel
 }
@@ -274,10 +270,6 @@ func New(version string) func() provider.Provider {
 }
 
 func (p *CleanEksProvider) GetClientSet(ctx context.Context) (*kubernetes.Clientset, error) {
-	if p.clientSet != nil {
-		return p.clientSet, nil
-	}
-
 	var clientSet *kubernetes.Clientset
 	restConfig, err := newKubernetesClientConfig(ctx, p.model)
 	if err != nil {
@@ -288,8 +280,6 @@ func (p *CleanEksProvider) GetClientSet(ctx context.Context) (*kubernetes.Client
 			return nil, err
 		}
 	}
-
-	p.clientSet = clientSet
 
 	return clientSet, nil
 }

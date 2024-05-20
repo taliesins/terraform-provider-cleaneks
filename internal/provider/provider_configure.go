@@ -18,6 +18,8 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
+const passwordMask = "********"
+
 func (p *CleanEksProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
 	tflog.Debug(ctx, "Configuring provider")
 
@@ -28,19 +30,7 @@ func (p *CleanEksProvider) Configure(ctx context.Context, req provider.Configure
 		return
 	}
 
-	host := ""
-	if !(model.Host.IsNull() || model.Host.IsUnknown()) {
-		host = model.Host.ValueString()
-	}
-
-	burstLimit := int64(0)
-	if !(model.BurstLimit.IsNull() || model.BurstLimit.IsUnknown()) {
-		burstLimit = model.BurstLimit.ValueInt64()
-	}
-
 	p.model = model
-	p.Host = host
-	p.BurstLimit = burstLimit
 
 	if p.clientSet == nil {
 		clientSet, err := p.GetClientSet(ctx)
@@ -65,8 +55,42 @@ func (p *CleanEksProvider) Configure(ctx context.Context, req provider.Configure
 	resp.DataSourceData = p
 	resp.ResourceData = p
 
+	execCommand := ""
+	execArgs := []string{}
+	execEnv := map[string]string{}
+	if len(p.model.Exec) > 0 {
+		execCommand = p.model.Exec[0].Command.ValueString()
+		execArgs = p.model.Exec[0].Args
+		execEnv = p.model.Exec[0].Env
+	}
+
+	password := ""
+	if len(p.model.Password.ValueString()) > 0 {
+		password = passwordMask
+	}
+
+	clientKey := ""
+	if len(p.model.ClientKey.ValueString()) > 0 {
+		clientKey = passwordMask
+	}
 	tflog.Debug(ctx, "Loaded provider configuration during Provider.Configuration", map[string]interface{}{
-		"providerConfig": fmt.Sprintf("%+v", p),
+		"host":                  p.model.Host.ValueString(),
+		"burtLimit":             p.model.BurstLimit.ValueInt64(),
+		"token":                 p.model.Token.ValueString(),
+		"insecure":              p.model.Insecure.ValueBool(),
+		"clusterCACertificate":  p.model.ClusterCACertificate.ValueString(),
+		"tlsServerName":         p.model.TLSServerName.ValueString(),
+		"username":              p.model.Username.ValueString(),
+		"password":              password,
+		"clientCertificate":     p.model.ClientCertificate.ValueString(),
+		"clientKey":             clientKey,
+		"execCommand":           execCommand,
+		"execArgs":              execArgs,
+		"execEnv":               execEnv,
+		"configPaths":           p.model.ConfigPaths,
+		"configContext":         p.model.ConfigContext.ValueString(),
+		"configContextCluster":  p.model.ConfigContextCluster.ValueString(),
+		"configContextAuthInfo": p.model.ConfigContextAuthInfo.ValueString(),
 	})
 }
 
