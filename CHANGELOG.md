@@ -1,4 +1,10 @@
 
+<a name="v0.1.32"></a>
+## [v0.1.32](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.31...v0.1.32) (2024-05-20)
+
+### Fix
+- [a5641af](https://github.com/taliesins/terraform-provider-cleaneks/commit/a5641af07bf72da932c35577f7085a7a745f14ec) fallback to insecure when unknown
+
 <a name="v0.1.31"></a>
 ## [v0.1.31](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.30...v0.1.31) (2024-05-20)
 
