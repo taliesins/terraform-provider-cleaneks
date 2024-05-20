@@ -332,17 +332,8 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	var err error
 
-	clientSet := cleanEksProviderResourceData.clientSet
-	if clientSet == nil {
-		clientSet, err = cleanEksProviderResourceData.GetClientSet(ctx)
-		if err != nil {
-			res.Diagnostics.AddError(
-				"Error getting Kubernetes client during JobResource.Create",
-				fmt.Sprintf("Error getting Kubernetes client during JobResource.Create: %s", err),
-			)
-			return
-		}
-		cleanEksProviderResourceData.clientSet = clientSet
+	if r.provider.model.Host.IsUnknown() && !(model.ID.IsUnknown() || model.ID.IsNull()) {
+		r.provider.model.Host = model.ID
 	}
 
 	execCommand := ""
@@ -381,6 +372,19 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		"configContextCluster":  r.provider.model.ConfigContextCluster.ValueString(),
 		"configContextAuthInfo": r.provider.model.ConfigContextAuthInfo.ValueString(),
 	})
+
+	clientSet := cleanEksProviderResourceData.clientSet
+	if clientSet == nil {
+		clientSet, err = cleanEksProviderResourceData.GetClientSet(ctx)
+		if err != nil {
+			res.Diagnostics.AddError(
+				"Error getting Kubernetes client during JobResource.Create",
+				fmt.Sprintf("Error getting Kubernetes client during JobResource.Create: %s", err),
+			)
+			return
+		}
+		cleanEksProviderResourceData.clientSet = clientSet
+	}
 
 	removeAwsCni := true
 	if !(model.RemoveAwsCni.IsNull() || model.RemoveAwsCni.IsUnknown()) {
@@ -770,6 +774,10 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 		return
 	}
 
+	if r.provider.model.Host.IsUnknown() && !(model.ID.IsUnknown() || model.ID.IsNull()) {
+		r.provider.model.Host = model.ID
+	}
+
 	execCommand := ""
 	execArgs := []string{}
 	execEnv := map[string]string{}
@@ -1034,6 +1042,10 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 			fmt.Sprintf("Provider not configured"),
 		)
 		return
+	}
+
+	if r.provider.model.Host.IsUnknown() && !(model.ID.IsUnknown() || model.ID.IsNull()) {
+		r.provider.model.Host = model.ID
 	}
 
 	execCommand := ""
