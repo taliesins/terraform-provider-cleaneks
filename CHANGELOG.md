@@ -1,4 +1,10 @@
 
+<a name="v0.1.30"></a>
+## [v0.1.30](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.29...v0.1.30) (2024-05-20)
+
+### Fix
+- [98c5a36](https://github.com/taliesins/terraform-provider-cleaneks/commit/98c5a36f65d2144b7e5cd6e7abeb9c79e354f52f) If values are unknown during the read phase then skip over the read phase
+
 <a name="v0.1.29"></a>
 ## [v0.1.29](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.28...v0.1.29) (2024-05-20)
 
