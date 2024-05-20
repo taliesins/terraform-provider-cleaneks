@@ -1,4 +1,10 @@
 
+<a name="v0.1.29"></a>
+## [v0.1.29](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.28...v0.1.29) (2024-05-20)
+
+### Fix
+- [aea914f](https://github.com/taliesins/terraform-provider-cleaneks/commit/aea914f28e07a8d2dd582a6d9da1ea80e49cfab9) Show values clearly for the configuration of the provider
+
 <a name="v0.1.28"></a>
 ## [v0.1.28](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.27...v0.1.28) (2024-05-20)
 
