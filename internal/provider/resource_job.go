@@ -2,8 +2,10 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -11,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -359,7 +362,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	if len(r.provider.model.ClientKey.ValueString()) > 0 {
 		clientKey = passwordMask
 	}
-	tflog.Debug(ctx, "Loaded provider configuration during Provider.Configuration", map[string]interface{}{
+	tflog.Debug(ctx, "Loaded provider configuration during Job.Create", map[string]interface{}{
 		"host":                  r.provider.model.Host.ValueString(),
 		"burtLimit":             r.provider.model.BurstLimit.ValueInt64(),
 		"token":                 r.provider.model.Token.ValueString(),
@@ -784,7 +787,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	if len(r.provider.model.ClientKey.ValueString()) > 0 {
 		clientKey = passwordMask
 	}
-	tflog.Debug(ctx, "Loaded provider configuration during Provider.Configuration", map[string]interface{}{
+	tflog.Debug(ctx, "Loaded provider configuration during Job.Read", map[string]interface{}{
 		"host":                  r.provider.model.Host.ValueString(),
 		"burtLimit":             r.provider.model.BurstLimit.ValueInt64(),
 		"token":                 r.provider.model.Token.ValueString(),
@@ -810,11 +813,17 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	if clientSet == nil {
 		clientSet, err = cleanEksProviderResourceData.GetClientSet(ctx)
 		if err != nil {
-			res.Diagnostics.AddError(
-				"Error getting Kubernetes client during JobResource.Read",
-				fmt.Sprintf("Error getting Kubernetes client during JobResource.Read: %s", err),
-			)
-			return
+			if errors.Is(err, clientcmd.ErrEmptyConfig) && r.provider.model.Host.IsUnknown() {
+				// We don't want to throw error here as we EKS cluster might not exist yet
+				res.Diagnostics.Append(diag.NewWarningDiagnostic("Host configuration is not know yet. Provider operations likely to fail. Failed to initialize Kubernetes client configuration, this could be because credentials are not available during provider initialization", err.Error()))
+				return
+			} else {
+				res.Diagnostics.AddError(
+					"Error getting Kubernetes client during JobResource.Read",
+					fmt.Sprintf("Error getting Kubernetes client during JobResource.Read: %s", err),
+				)
+				return
+			}
 		}
 		cleanEksProviderResourceData.clientSet = clientSet
 	}
@@ -1044,7 +1053,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	if len(r.provider.model.ClientKey.ValueString()) > 0 {
 		clientKey = passwordMask
 	}
-	tflog.Debug(ctx, "Loaded provider configuration during Provider.Configuration", map[string]interface{}{
+	tflog.Debug(ctx, "Loaded provider configuration during Job.Update", map[string]interface{}{
 		"host":                  r.provider.model.Host.ValueString(),
 		"burtLimit":             r.provider.model.BurstLimit.ValueInt64(),
 		"token":                 r.provider.model.Token.ValueString(),

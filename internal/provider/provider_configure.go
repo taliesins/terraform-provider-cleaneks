@@ -36,12 +36,19 @@ func (p *CleanEksProvider) Configure(ctx context.Context, req provider.Configure
 		clientSet, err := p.GetClientSet(ctx)
 		if err != nil {
 			if errors.Is(err, clientcmd.ErrEmptyConfig) {
-				// We don't want to throw error here as we EKS cluster might not exist yet
-				resp.Diagnostics.Append(diag.NewWarningDiagnostic("Invalid provider configuration was supplied. Provider operations likely to fail. Failed to initialize Kubernetes client configuration, this could be because credentials are not available during provider initialization", err.Error()))
+				if p.model.Host.IsUnknown() {
+					// We don't want to throw error here as we EKS cluster might not exist yet
+					resp.Diagnostics.Append(diag.NewWarningDiagnostic("Host configuration is not know yet. Provider operations likely to fail. Failed to initialize Kubernetes client configuration, this could be because credentials are not available during provider initialization", err.Error()))
+					return
+				} else {
+					// We don't want to throw error here as we EKS cluster might not exist yet
+					resp.Diagnostics.Append(diag.NewWarningDiagnostic("Invalid provider configuration was supplied. Provider operations likely to fail. Failed to initialize Kubernetes client configuration", err.Error()))
+					return
+				}
 			} else {
 				resp.Diagnostics.AddError(
-					"Error getting Kubernetes client during JobResource.Configure",
-					fmt.Sprintf("Error getting Kubernetes client during JobResource.Configure: %s", err),
+					"Error getting Kubernetes client during Provider.Configure",
+					fmt.Sprintf("Error getting Kubernetes client during Provider.Configure: %s", err),
 				)
 				return
 			}
