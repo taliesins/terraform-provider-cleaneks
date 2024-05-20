@@ -341,8 +341,42 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		}
 		cleanEksProviderResourceData.clientSet = clientSet
 	}
-	tflog.Debug(ctx, "Loaded provider configuration during JobResource.Create", map[string]interface{}{
-		"providerConfig": fmt.Sprintf("%+v", r.provider),
+
+	execCommand := ""
+	execArgs := []string{}
+	execEnv := map[string]string{}
+	if len(r.provider.model.Exec) > 0 {
+		execCommand = r.provider.model.Exec[0].Command.ValueString()
+		execArgs = r.provider.model.Exec[0].Args
+		execEnv = r.provider.model.Exec[0].Env
+	}
+	password := ""
+	if len(r.provider.model.Password.ValueString()) > 0 {
+		password = passwordMask
+	}
+
+	clientKey := ""
+	if len(r.provider.model.ClientKey.ValueString()) > 0 {
+		clientKey = passwordMask
+	}
+	tflog.Debug(ctx, "Loaded provider configuration during Provider.Configuration", map[string]interface{}{
+		"host":                  r.provider.model.Host.ValueString(),
+		"burtLimit":             r.provider.model.BurstLimit.ValueInt64(),
+		"token":                 r.provider.model.Token.ValueString(),
+		"insecure":              r.provider.model.Insecure.ValueBool(),
+		"clusterCACertificate":  r.provider.model.ClusterCACertificate.ValueString(),
+		"tlsServerName":         r.provider.model.TLSServerName.ValueString(),
+		"username":              r.provider.model.Username.ValueString(),
+		"password":              password,
+		"clientCertificate":     r.provider.model.ClientCertificate.ValueString(),
+		"clientKey":             clientKey,
+		"execCommand":           execCommand,
+		"execArgs":              execArgs,
+		"execEnv":               execEnv,
+		"configPaths":           r.provider.model.ConfigPaths,
+		"configContext":         r.provider.model.ConfigContext.ValueString(),
+		"configContextCluster":  r.provider.model.ConfigContextCluster.ValueString(),
+		"configContextAuthInfo": r.provider.model.ConfigContextAuthInfo.ValueString(),
 	})
 
 	removeAwsCni := true
@@ -706,7 +740,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	model.ImportCorednsToHelm = basetypes.NewBoolValue(importCorednsToHelm && (deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
 
-	model.ID = basetypes.NewStringValue(r.provider.Host)
+	model.ID = basetypes.NewStringValue(r.provider.model.Host.ValueString())
 
 	// Finally, set the state
 	tflog.Debug(ctx, "Storing job info into the state")
@@ -732,8 +766,42 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 		)
 		return
 	}
-	tflog.Debug(ctx, "Loaded provider configuration during JobResource.Read", map[string]interface{}{
-		"providerConfig": fmt.Sprintf("%+v", r.provider),
+
+	execCommand := ""
+	execArgs := []string{}
+	execEnv := map[string]string{}
+	if len(r.provider.model.Exec) > 0 {
+		execCommand = r.provider.model.Exec[0].Command.ValueString()
+		execArgs = r.provider.model.Exec[0].Args
+		execEnv = r.provider.model.Exec[0].Env
+	}
+	password := ""
+	if len(r.provider.model.Password.ValueString()) > 0 {
+		password = passwordMask
+	}
+
+	clientKey := ""
+	if len(r.provider.model.ClientKey.ValueString()) > 0 {
+		clientKey = passwordMask
+	}
+	tflog.Debug(ctx, "Loaded provider configuration during Provider.Configuration", map[string]interface{}{
+		"host":                  r.provider.model.Host.ValueString(),
+		"burtLimit":             r.provider.model.BurstLimit.ValueInt64(),
+		"token":                 r.provider.model.Token.ValueString(),
+		"insecure":              r.provider.model.Insecure.ValueBool(),
+		"clusterCACertificate":  r.provider.model.ClusterCACertificate.ValueString(),
+		"tlsServerName":         r.provider.model.TLSServerName.ValueString(),
+		"username":              r.provider.model.Username.ValueString(),
+		"password":              password,
+		"clientCertificate":     r.provider.model.ClientCertificate.ValueString(),
+		"clientKey":             clientKey,
+		"execCommand":           execCommand,
+		"execArgs":              execArgs,
+		"execEnv":               execEnv,
+		"configPaths":           r.provider.model.ConfigPaths,
+		"configContext":         r.provider.model.ConfigContext.ValueString(),
+		"configContextCluster":  r.provider.model.ConfigContextCluster.ValueString(),
+		"configContextAuthInfo": r.provider.model.ConfigContextAuthInfo.ValueString(),
 	})
 
 	var err error
@@ -930,7 +998,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 
 	model.ImportCorednsToHelm = basetypes.NewBoolValue(importCorednsToHelm && (deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
 
-	model.ID = basetypes.NewStringValue(r.provider.Host)
+	model.ID = basetypes.NewStringValue(r.provider.model.Host.ValueString())
 
 	// Finally, set the state
 	tflog.Debug(ctx, "Storing job info into the state")
@@ -958,8 +1026,42 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		)
 		return
 	}
-	tflog.Debug(ctx, "Loaded provider configuration during JobResource.Update", map[string]interface{}{
-		"providerConfig": fmt.Sprintf("%+v", r.provider),
+
+	execCommand := ""
+	execArgs := []string{}
+	execEnv := map[string]string{}
+	if len(r.provider.model.Exec) > 0 {
+		execCommand = r.provider.model.Exec[0].Command.ValueString()
+		execArgs = r.provider.model.Exec[0].Args
+		execEnv = r.provider.model.Exec[0].Env
+	}
+	password := ""
+	if len(r.provider.model.Password.ValueString()) > 0 {
+		password = passwordMask
+	}
+
+	clientKey := ""
+	if len(r.provider.model.ClientKey.ValueString()) > 0 {
+		clientKey = passwordMask
+	}
+	tflog.Debug(ctx, "Loaded provider configuration during Provider.Configuration", map[string]interface{}{
+		"host":                  r.provider.model.Host.ValueString(),
+		"burtLimit":             r.provider.model.BurstLimit.ValueInt64(),
+		"token":                 r.provider.model.Token.ValueString(),
+		"insecure":              r.provider.model.Insecure.ValueBool(),
+		"clusterCACertificate":  r.provider.model.ClusterCACertificate.ValueString(),
+		"tlsServerName":         r.provider.model.TLSServerName.ValueString(),
+		"username":              r.provider.model.Username.ValueString(),
+		"password":              password,
+		"clientCertificate":     r.provider.model.ClientCertificate.ValueString(),
+		"clientKey":             clientKey,
+		"execCommand":           execCommand,
+		"execArgs":              execArgs,
+		"execEnv":               execEnv,
+		"configPaths":           r.provider.model.ConfigPaths,
+		"configContext":         r.provider.model.ConfigContext.ValueString(),
+		"configContextCluster":  r.provider.model.ConfigContextCluster.ValueString(),
+		"configContextAuthInfo": r.provider.model.ConfigContextAuthInfo.ValueString(),
 	})
 
 	var err error
@@ -1347,7 +1449,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	model.ImportCorednsToHelm = basetypes.NewBoolValue(importCorednsToHelm && (deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
 
-	model.ID = basetypes.NewStringValue(r.provider.Host)
+	model.ID = basetypes.NewStringValue(r.provider.model.Host.ValueString())
 
 	// Finally, set the state
 	tflog.Debug(ctx, "Storing job info into the state")
