@@ -341,6 +341,9 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		}
 		cleanEksProviderResourceData.clientSet = clientSet
 	}
+	tflog.Debug(ctx, "Loaded provider configuration during JobResource.Create", map[string]interface{}{
+		"providerConfig": fmt.Sprintf("%+v", r.provider),
+	})
 
 	removeAwsCni := true
 	if !(model.RemoveAwsCni.IsNull() || model.RemoveAwsCni.IsUnknown()) {
@@ -729,6 +732,9 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 		)
 		return
 	}
+	tflog.Debug(ctx, "Loaded provider configuration during JobResource.Read", map[string]interface{}{
+		"providerConfig": fmt.Sprintf("%+v", r.provider),
+	})
 
 	var err error
 
@@ -952,6 +958,9 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		)
 		return
 	}
+	tflog.Debug(ctx, "Loaded provider configuration during JobResource.Update", map[string]interface{}{
+		"providerConfig": fmt.Sprintf("%+v", r.provider),
+	})
 
 	var err error
 
