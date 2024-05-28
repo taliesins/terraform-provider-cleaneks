@@ -117,20 +117,21 @@ func ServiceExist(ctx context.Context, clientset *kubernetes.Clientset, namespac
 	}
 }
 
-func ServiceExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, err error) {
+func ServiceExistsAndIsAwsOne(ctx context.Context, clientset *kubernetes.Clientset, namespace string, name string) (exists bool, clusterIPs []string, err error) {
 	deployment, err := clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
 	switch {
 	case err != nil && !errors.IsNotFound(err):
-		return false, err
+		return false, nil, err
 	case errors.IsNotFound(err):
-		return false, nil
+		return false, nil, nil
 	default:
+
 		if deployment.Labels == nil {
-			return false, nil
+			return false, nil, nil
 		}
 
 		_, ok := deployment.Labels[amazonManagedLabelName]
-		return ok, nil
+		return ok, deployment.Spec.ClusterIPs, nil
 	}
 }
 

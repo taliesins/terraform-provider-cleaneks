@@ -58,6 +58,7 @@ data "aws_eks_cluster_auth" "cluster" {
 - `aws_coredns_deployment_exists` (Boolean) Does **AWS CoreDNS** deployment exist.
 - `aws_coredns_pod_disruption_budget_exists` (Boolean) Does **AWS CoreDNS** pod disruption budget exist.
 - `aws_coredns_service_account_exists` (Boolean) Does **AWS CoreDNS** service account exist.
+- `aws_coredns_service_cluster_ips` (Boolean) **Cluster Ips** of the AWS CoreDNS service.
 - `aws_coredns_service_exists` (Boolean) Does **AWS CoreDNS** service exist.
 - `coredns_config_map_label_amazon_managed_removed` (Boolean) Is label **eks.amazonaws.com/component** removed. Returns **true** if config map does not exist as Helm chart can be deployed.
 - `coredns_config_map_label_helm_release_name_set` (Boolean) Does CoreDNS service have label **meta.helm.sh/release-name** with value of **coredns**. Returns **true** if config map does not exist as Helm chart can be deployed.
