@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -43,6 +44,7 @@ type JobResourceModel struct {
 	AwsCoreDnsDeploymentExists          types.Bool `tfsdk:"aws_coredns_deployment_exists"`
 	AwsCoreDnsServiceExists             types.Bool `tfsdk:"aws_coredns_service_exists"`
 	AwsCoreDnsServiceAccountExists      types.Bool `tfsdk:"aws_coredns_service_account_exists"`
+	AwsCoreDnsServiceClusterIps         types.List `tfsdk:"aws_coredns_service_cluster_ips"`
 	AwsCoreDnsConfigMapExists           types.Bool `tfsdk:"aws_coredns_config_map_exists"`
 	AwsCoreDnsPodDisruptionBudgetExists types.Bool `tfsdk:"aws_coredns_pod_disruption_budget_exists"`
 
@@ -151,6 +153,12 @@ func (r *JobResource) Schema(_ context.Context, req resource.SchemaRequest, resp
 			"aws_coredns_service_account_exists": schema.BoolAttribute{
 				MarkdownDescription: "Does **AWS CoreDNS** service account exist.",
 				Description:         "Does AWS CoreDNS service account exist.",
+				Computed:            true,
+			},
+
+			"aws_coredns_service_cluster_ips": schema.BoolAttribute{
+				MarkdownDescription: "**Cluster Ips** of the AWS CoreDNS service.",
+				Description:         "Cluster Ips of the AWS CoreDNS service.",
 				Computed:            true,
 			},
 
@@ -401,6 +409,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	removeCoreDns := true
+	clusterIps := []string{}
 	if !(model.RemoveCoreDns.IsNull() || model.RemoveCoreDns.IsUnknown()) {
 		removeCoreDns = model.RemoveCoreDns.ValueBool()
 	}
@@ -444,7 +453,8 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 		if removeCoreDns {
 			// We only want to delete the Amazon CoreDNS and not any further deployed versions
-			deploymentExistsAndIsAwsOne, err := DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+			deploymentExistsAndIsAwsOne := false
+			deploymentExistsAndIsAwsOne, err = DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error checking CoreDNS deployment is AWS one",
@@ -463,8 +473,8 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 					return
 				}
 			}
-
-			serviceExistsAndIsAwsOne, err := ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
+			serviceExistsAndIsAwsOne := false
+			serviceExistsAndIsAwsOne, clusterIps, err = ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error checking CoreDNS service is AWS one",
@@ -483,8 +493,8 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 					return
 				}
 			}
-
-			serviceAccountExistsAndIsAwsOne, err := ServiceAccountExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+			serviceAccountExistsAndIsAwsOne := false
+			serviceAccountExistsAndIsAwsOne, err = ServiceAccountExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error checking CoreDNS service account is AWS one",
@@ -503,8 +513,8 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 					return
 				}
 			}
-
-			configMapExistsAndIsAwsOne, err := ConfigMapExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+			configMapExistsAndIsAwsOne := false
+			configMapExistsAndIsAwsOne, err = ConfigMapExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error checking CoreDNS config map is AWS one",
@@ -524,7 +534,8 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 				}
 			}
 
-			podDisruptionBudgetExistsAndIsAwsOne, err := PodDisruptionBudgetExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+			podDisruptionBudgetExistsAndIsAwsOne := false
+			podDisruptionBudgetExistsAndIsAwsOne, err = PodDisruptionBudgetExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error checking CoreDNS pod disruption budget is AWS one",
@@ -638,7 +649,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 	model.AwsCoreDnsDeploymentExists = basetypes.NewBoolValue(awsCoreDnsAwsDeploymentExists)
 
-	awsCoreDnsServiceExists, err := ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
+	awsCoreDnsServiceExists, _, err := ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking for CoreDNS service",
@@ -751,6 +762,14 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 
 	model.ImportCorednsToHelm = basetypes.NewBoolValue(importCorednsToHelm && (deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
 
+	if len(clusterIps) > 0 {
+		elements := []attr.Value{}
+		for _, clusterIp := range clusterIps {
+			elements = append(elements, types.StringValue(clusterIp))
+		}
+		listValue, _ := types.ListValue(types.StringType, elements)
+		model.AwsCoreDnsServiceClusterIps = listValue
+	}
 	model.ID = basetypes.NewStringValue(r.provider.model.Host.ValueString())
 
 	// Finally, set the state
@@ -855,6 +874,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	}
 
 	removeCoreDns := true
+	clusterIps := []string{}
 	if !(model.RemoveCoreDns.IsNull() || model.RemoveCoreDns.IsUnknown()) {
 		removeCoreDns = model.RemoveCoreDns.ValueBool()
 	}
@@ -910,7 +930,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	}
 	model.AwsCoreDnsDeploymentExists = basetypes.NewBoolValue(awsCoreDnsAwsDeploymentExists)
 
-	awsCoreDnsServiceExists, err := ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
+	awsCoreDnsServiceExists, _, err := ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking for CoreDNS service",
@@ -1023,6 +1043,14 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 
 	model.ImportCorednsToHelm = basetypes.NewBoolValue(importCorednsToHelm && (deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
 
+	if len(clusterIps) > 0 {
+		elements := []attr.Value{}
+		for _, clusterIp := range clusterIps {
+			elements = append(elements, types.StringValue(clusterIp))
+		}
+		listValue, _ := types.ListValue(types.StringType, elements)
+		model.AwsCoreDnsServiceClusterIps = listValue
+	}
 	model.ID = basetypes.NewStringValue(r.provider.model.Host.ValueString())
 
 	// Finally, set the state
@@ -1123,6 +1151,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	removeCoreDns := true
+	clusterIps := []string{}
 	if !(model.RemoveCoreDns.IsNull() || model.RemoveCoreDns.IsUnknown()) {
 		removeCoreDns = model.RemoveCoreDns.ValueBool()
 	}
@@ -1174,7 +1203,8 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 		if removeCoreDns {
 			// We only want to delete the Amazon CoreDNS and not any further deployed versions
-			deploymentExistsAndIsAwsOne, err := DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+			deploymentExistsAndIsAwsOne := false
+			deploymentExistsAndIsAwsOne, err = DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error checking CoreDNS deployment is AWS one",
@@ -1194,7 +1224,8 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 				}
 			}
 
-			serviceExistsAndIsAwsOne, err := ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
+			serviceExistsAndIsAwsOne := false
+			serviceExistsAndIsAwsOne, _, err = ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error checking CoreDNS service is AWS one",
@@ -1214,7 +1245,8 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 				}
 			}
 
-			serviceAccountExistsAndIsAwsOne, err := ServiceAccountExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+			serviceAccountExistsAndIsAwsOne := false
+			serviceAccountExistsAndIsAwsOne, err = ServiceAccountExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error checking CoreDNS service account is AWS one",
@@ -1234,7 +1266,8 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 				}
 			}
 
-			configMapExistsAndIsAwsOne, err := ConfigMapExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+			configMapExistsAndIsAwsOne := false
+			configMapExistsAndIsAwsOne, err = ConfigMapExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error checking CoreDNS config map is AWS one",
@@ -1254,7 +1287,8 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 				}
 			}
 
-			podDisruptionBudgetExistsAndIsAwsOne, err := PodDisruptionBudgetExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
+			podDisruptionBudgetExistsAndIsAwsOne := false
+			podDisruptionBudgetExistsAndIsAwsOne, err = PodDisruptionBudgetExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
 				res.Diagnostics.AddError(
 					"Error checking CoreDNS pod disruption budget is AWS one",
@@ -1369,7 +1403,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 	model.AwsCoreDnsDeploymentExists = basetypes.NewBoolValue(awsCoreDnsAwsDeploymentExists)
 
-	awsCoreDnsServiceExists, err := ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
+	awsCoreDnsServiceExists, _, err := ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking for CoreDNS service",
@@ -1482,6 +1516,14 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 
 	model.ImportCorednsToHelm = basetypes.NewBoolValue(importCorednsToHelm && (deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
 
+	if len(clusterIps) > 0 {
+		elements := []attr.Value{}
+		for _, clusterIp := range clusterIps {
+			elements = append(elements, types.StringValue(clusterIp))
+		}
+		listValue, _ := types.ListValue(types.StringType, elements)
+		model.AwsCoreDnsServiceClusterIps = listValue
+	}
 	model.ID = basetypes.NewStringValue(r.provider.model.Host.ValueString())
 
 	// Finally, set the state
