@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -44,7 +43,7 @@ type JobResourceModel struct {
 	AwsCoreDnsDeploymentExists          types.Bool `tfsdk:"aws_coredns_deployment_exists"`
 	AwsCoreDnsServiceExists             types.Bool `tfsdk:"aws_coredns_service_exists"`
 	AwsCoreDnsServiceAccountExists      types.Bool `tfsdk:"aws_coredns_service_account_exists"`
-	AwsCoreDnsServiceClusterIps         types.List `tfsdk:"aws_coredns_service_cluster_ips"`
+	AwsCoreDnsServiceClusterIps         []string   `tfsdk:"aws_coredns_service_cluster_ips"`
 	AwsCoreDnsConfigMapExists           types.Bool `tfsdk:"aws_coredns_config_map_exists"`
 	AwsCoreDnsPodDisruptionBudgetExists types.Bool `tfsdk:"aws_coredns_pod_disruption_budget_exists"`
 
@@ -764,12 +763,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	model.ImportCorednsToHelm = basetypes.NewBoolValue(importCorednsToHelm && (deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
 
 	if len(clusterIps) > 0 {
-		elements := []attr.Value{}
-		for _, clusterIp := range clusterIps {
-			elements = append(elements, types.StringValue(clusterIp))
-		}
-		listValue, _ := types.ListValue(types.StringType, elements)
-		model.AwsCoreDnsServiceClusterIps = listValue
+		model.AwsCoreDnsServiceClusterIps = clusterIps
 	}
 	model.ID = basetypes.NewStringValue(r.provider.model.Host.ValueString())
 
@@ -1045,12 +1039,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	model.ImportCorednsToHelm = basetypes.NewBoolValue(importCorednsToHelm && (deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
 
 	if len(clusterIps) > 0 {
-		elements := []attr.Value{}
-		for _, clusterIp := range clusterIps {
-			elements = append(elements, types.StringValue(clusterIp))
-		}
-		listValue, _ := types.ListValue(types.StringType, elements)
-		model.AwsCoreDnsServiceClusterIps = listValue
+		model.AwsCoreDnsServiceClusterIps = clusterIps
 	}
 	model.ID = basetypes.NewStringValue(r.provider.model.Host.ValueString())
 
@@ -1518,12 +1507,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	model.ImportCorednsToHelm = basetypes.NewBoolValue(importCorednsToHelm && (deploymentHelmReleaseNameAnnotationSet && deploymentHelmReleaseNamespaceAnnotationSet && deploymentManagedByLabelSet && deploymentAmazonManagedLabelRemoved && serviceHelmReleaseNameAnnotationSet && serviceHelmReleaseNamespaceAnnotationSet && serviceManagedByLabelSet && serviceAmazonManagedLabelRemoved && serviceAccountHelmReleaseNameAnnotationSet && serviceAccountHelmReleaseNamespaceAnnotationSet && serviceAccountManagedByLabelSet && serviceAccountAmazonManagedLabelRemoved && configMapHelmReleaseNameAnnotationSet && configMapHelmReleaseNamespaceAnnotationSet && configMapManagedByLabelSet && configMapAmazonManagedLabelRemoved && podDistruptionBudgetHelmReleaseNameAnnotationSet && podDistruptionBudgetHelmReleaseNamespaceAnnotationSet && podDistruptionBudgetManagedByLabelSet && podDistruptionBudgetAmazonManagedLabelRemoved))
 
 	if len(clusterIps) > 0 {
-		elements := []attr.Value{}
-		for _, clusterIp := range clusterIps {
-			elements = append(elements, types.StringValue(clusterIp))
-		}
-		listValue, _ := types.ListValue(types.StringType, elements)
-		model.AwsCoreDnsServiceClusterIps = listValue
+		model.AwsCoreDnsServiceClusterIps = clusterIps
 	}
 	model.ID = basetypes.NewStringValue(r.provider.model.Host.ValueString())
 
