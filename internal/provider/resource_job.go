@@ -156,10 +156,11 @@ func (r *JobResource) Schema(_ context.Context, req resource.SchemaRequest, resp
 				Computed:            true,
 			},
 
-			"aws_coredns_service_cluster_ips": schema.BoolAttribute{
+			"aws_coredns_service_cluster_ips": schema.ListAttribute{
 				MarkdownDescription: "**Cluster Ips** of the AWS CoreDNS service.",
 				Description:         "Cluster Ips of the AWS CoreDNS service.",
 				Computed:            true,
+				ElementType:         types.StringType,
 			},
 
 			"aws_coredns_config_map_exists": schema.BoolAttribute{
