@@ -41,12 +41,12 @@ type JobResourceModel struct {
 	KubeProxyDaemonsetExists types.Bool `tfsdk:"kube_proxy_daemonset_exists"`
 	KubeProxyConfigMapExists types.Bool `tfsdk:"kube_proxy_config_map_exists"`
 
-	AwsCoreDnsDeploymentExists          types.Bool     `tfsdk:"aws_coredns_deployment_exists"`
-	AwsCoreDnsServiceExists             types.Bool     `tfsdk:"aws_coredns_service_exists"`
-	AwsCoreDnsServiceAccountExists      types.Bool     `tfsdk:"aws_coredns_service_account_exists"`
-	AwsCoreDnsServiceClusterIps         types.ListType `tfsdk:"aws_coredns_service_cluster_ips"`
-	AwsCoreDnsConfigMapExists           types.Bool     `tfsdk:"aws_coredns_config_map_exists"`
-	AwsCoreDnsPodDisruptionBudgetExists types.Bool     `tfsdk:"aws_coredns_pod_disruption_budget_exists"`
+	AwsCoreDnsDeploymentExists          types.Bool `tfsdk:"aws_coredns_deployment_exists"`
+	AwsCoreDnsServiceExists             types.Bool `tfsdk:"aws_coredns_service_exists"`
+	AwsCoreDnsServiceAccountExists      types.Bool `tfsdk:"aws_coredns_service_account_exists"`
+	AwsCoreDnsServiceClusterIps         types.List `tfsdk:"aws_coredns_service_cluster_ips"`
+	AwsCoreDnsConfigMapExists           types.Bool `tfsdk:"aws_coredns_config_map_exists"`
+	AwsCoreDnsPodDisruptionBudgetExists types.Bool `tfsdk:"aws_coredns_pod_disruption_budget_exists"`
 
 	CorednsDeploymentLabelHelmReleaseNameSet      types.Bool `tfsdk:"coredns_deployment_label_helm_release_name_set"`
 	CorednsDeploymentLabelHelmReleaseNamespaceSet types.Bool `tfsdk:"coredns_deployment_label_helm_release_namespace_set"`
@@ -769,11 +769,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 			elements = append(elements, types.StringValue(clusterIp))
 		}
 		listValue, _ := types.ListValue(types.StringType, elements)
-		listType := types.ListType{
-			ElemType: types.StringType,
-		}
-		listType.ValueFromList(ctx, listValue)
-		model.AwsCoreDnsServiceClusterIps = listType
+		model.AwsCoreDnsServiceClusterIps = listValue
 	}
 	model.ID = basetypes.NewStringValue(r.provider.model.Host.ValueString())
 
@@ -1054,11 +1050,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 			elements = append(elements, types.StringValue(clusterIp))
 		}
 		listValue, _ := types.ListValue(types.StringType, elements)
-		listType := types.ListType{
-			ElemType: types.StringType,
-		}
-		listType.ValueFromList(ctx, listValue)
-		model.AwsCoreDnsServiceClusterIps = listType
+		model.AwsCoreDnsServiceClusterIps = listValue
 	}
 	model.ID = basetypes.NewStringValue(r.provider.model.Host.ValueString())
 
@@ -1531,11 +1523,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 			elements = append(elements, types.StringValue(clusterIp))
 		}
 		listValue, _ := types.ListValue(types.StringType, elements)
-		listType := types.ListType{
-			ElemType: types.StringType,
-		}
-		listType.ValueFromList(ctx, listValue)
-		model.AwsCoreDnsServiceClusterIps = listType
+		model.AwsCoreDnsServiceClusterIps = listValue
 	}
 	model.ID = basetypes.NewStringValue(r.provider.model.Host.ValueString())
 
