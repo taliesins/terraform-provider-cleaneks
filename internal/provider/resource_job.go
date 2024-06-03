@@ -410,7 +410,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	}
 
 	removeCoreDns := true
-	clusterIps := []string{}
+	var clusterIps []string
 	if !(model.RemoveCoreDns.IsNull() || model.RemoveCoreDns.IsUnknown()) {
 		removeCoreDns = model.RemoveCoreDns.ValueBool()
 	}
@@ -418,6 +418,16 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 	importCorednsToHelm := false
 	if !(model.ImportCorednsToHelm.IsNull() || model.ImportCorednsToHelm.IsUnknown()) {
 		importCorednsToHelm = model.ImportCorednsToHelm.ValueBool()
+	}
+
+	serviceExistsAndIsAwsOne := false
+	serviceExistsAndIsAwsOne, clusterIps, err = ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking CoreDNS service is AWS one",
+			fmt.Sprintf("Error checking CoreDNS service is AWS one: %s", err),
+		)
+		return
 	}
 
 	if removeAwsCni || removeKubeProxy || removeCoreDns || importCorednsToHelm {
@@ -452,7 +462,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 			}
 		}
 
-		if removeCoreDns {
+		if removeCoreDns || importCorednsToHelm {
 			// We only want to delete the Amazon CoreDNS and not any further deployed versions
 			deploymentExistsAndIsAwsOne := false
 			deploymentExistsAndIsAwsOne, err = DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
@@ -464,36 +474,6 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 				return
 			}
 
-			if deploymentExistsAndIsAwsOne {
-				_, err = DeleteDeployment(ctx, clientSet, "kube-system", "coredns")
-				if err != nil {
-					res.Diagnostics.AddError(
-						"Error removing CoreDNS deployment",
-						fmt.Sprintf("Error removing CoreDNS deployment: %s", err),
-					)
-					return
-				}
-			}
-			serviceExistsAndIsAwsOne := false
-			serviceExistsAndIsAwsOne, clusterIps, err = ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
-			if err != nil {
-				res.Diagnostics.AddError(
-					"Error checking CoreDNS service is AWS one",
-					fmt.Sprintf("Error checking CoreDNS service is AWS one: %s", err),
-				)
-				return
-			}
-
-			if serviceExistsAndIsAwsOne {
-				_, err = DeleteService(ctx, clientSet, "kube-system", "kube-dns")
-				if err != nil {
-					res.Diagnostics.AddError(
-						"Error removing CoreDNS service",
-						fmt.Sprintf("Error removing CoreDNS service: %s", err),
-					)
-					return
-				}
-			}
 			serviceAccountExistsAndIsAwsOne := false
 			serviceAccountExistsAndIsAwsOne, err = ServiceAccountExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
@@ -504,16 +484,6 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 				return
 			}
 
-			if serviceAccountExistsAndIsAwsOne {
-				_, err = DeleteServiceAccount(ctx, clientSet, "kube-system", "coredns")
-				if err != nil {
-					res.Diagnostics.AddError(
-						"Error removing CoreDNS service account",
-						fmt.Sprintf("Error removing CoreDNS service account: %s", err),
-					)
-					return
-				}
-			}
 			configMapExistsAndIsAwsOne := false
 			configMapExistsAndIsAwsOne, err = ConfigMapExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
@@ -522,17 +492,6 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 					fmt.Sprintf("Error checking CoreDNS config map is AWS one: %s", err),
 				)
 				return
-			}
-
-			if configMapExistsAndIsAwsOne {
-				_, err = DeleteConfigMap(ctx, clientSet, "kube-system", "coredns")
-				if err != nil {
-					res.Diagnostics.AddError(
-						"Error removing CoreDNS configmap",
-						fmt.Sprintf("Error removing CoreDNS configmap: %s", err),
-					)
-					return
-				}
 			}
 
 			podDisruptionBudgetExistsAndIsAwsOne := false
@@ -545,62 +504,116 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 				return
 			}
 
-			if podDisruptionBudgetExistsAndIsAwsOne {
-				_, err = DeletePodDisruptionBudget(ctx, clientSet, "kube-system", "coredns")
-				if err != nil {
-					res.Diagnostics.AddError(
-						"Error removing CoreDNS pod disruption budget",
-						fmt.Sprintf("Error removing CoreDNS pod disruption budget: %s", err),
-					)
-					return
+			if removeCoreDns {
+				if deploymentExistsAndIsAwsOne {
+					_, err = DeleteDeployment(ctx, clientSet, "kube-system", "coredns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error removing CoreDNS deployment",
+							fmt.Sprintf("Error removing CoreDNS deployment: %s", err),
+						)
+						return
+					}
 				}
-			}
-		}
 
-		if !removeCoreDns && importCorednsToHelm {
-			err = ImportDeploymentIntoHelm(ctx, clientSet, "kube-system", "coredns")
-			if err != nil {
-				res.Diagnostics.AddError(
-					"Error importing CoreDns deployment to Helm",
-					fmt.Sprintf("Error importing CoreDns deployment to Helm: %s", err),
-				)
-				return
-			}
+				if serviceExistsAndIsAwsOne {
+					_, err = DeleteService(ctx, clientSet, "kube-system", "kube-dns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error removing CoreDNS service",
+							fmt.Sprintf("Error removing CoreDNS service: %s", err),
+						)
+						return
+					}
+				}
 
-			err = ImportServiceIntoHelm(ctx, clientSet, "kube-system", "kube-dns")
-			if err != nil {
-				res.Diagnostics.AddError(
-					"Error importing CoreDns service to Helm",
-					fmt.Sprintf("Error importing CoreDns service to Helm: %s", err),
-				)
-				return
-			}
+				if serviceAccountExistsAndIsAwsOne {
+					_, err = DeleteServiceAccount(ctx, clientSet, "kube-system", "coredns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error removing CoreDNS service account",
+							fmt.Sprintf("Error removing CoreDNS service account: %s", err),
+						)
+						return
+					}
+				}
 
-			err = ImportServiceAccountIntoHelm(ctx, clientSet, "kube-system", "coredns")
-			if err != nil {
-				res.Diagnostics.AddError(
-					"Error importing CoreDns service account to Helm",
-					fmt.Sprintf("Error importing CoreDns service account to Helm: %s", err),
-				)
-				return
-			}
+				if configMapExistsAndIsAwsOne {
+					_, err = DeleteConfigMap(ctx, clientSet, "kube-system", "coredns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error removing CoreDNS configmap",
+							fmt.Sprintf("Error removing CoreDNS configmap: %s", err),
+						)
+						return
+					}
+				}
 
-			err = ImportConfigMapAccountIntoHelm(ctx, clientSet, "kube-system", "coredns")
-			if err != nil {
-				res.Diagnostics.AddError(
-					"Error importing CoreDns config map to Helm",
-					fmt.Sprintf("Error importing CoreDns config map to Helm: %s", err),
-				)
-				return
-			}
+				if podDisruptionBudgetExistsAndIsAwsOne {
+					_, err = DeletePodDisruptionBudget(ctx, clientSet, "kube-system", "coredns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error removing CoreDNS pod disruption budget",
+							fmt.Sprintf("Error removing CoreDNS pod disruption budget: %s", err),
+						)
+						return
+					}
+				}
+			} else if importCorednsToHelm {
+				if deploymentExistsAndIsAwsOne {
+					err = ImportDeploymentIntoHelm(ctx, clientSet, "kube-system", "coredns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error importing CoreDns deployment to Helm",
+							fmt.Sprintf("Error importing CoreDns deployment to Helm: %s", err),
+						)
+						return
+					}
+				}
 
-			err = ImportPodDisruptionBudgetIntoHelm(ctx, clientSet, "kube-system", "coredns")
-			if err != nil {
-				res.Diagnostics.AddError(
-					"Error importing CoreDns pod disruption budget to Helm",
-					fmt.Sprintf("Error importing CoreDns pod disruption budget to Helm: %s", err),
-				)
-				return
+				if serviceExistsAndIsAwsOne {
+					err = ImportServiceIntoHelm(ctx, clientSet, "kube-system", "kube-dns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error importing CoreDns service to Helm",
+							fmt.Sprintf("Error importing CoreDns service to Helm: %s", err),
+						)
+						return
+					}
+				}
+
+				if serviceAccountExistsAndIsAwsOne {
+					err = ImportServiceAccountIntoHelm(ctx, clientSet, "kube-system", "coredns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error importing CoreDns service account to Helm",
+							fmt.Sprintf("Error importing CoreDns service account to Helm: %s", err),
+						)
+						return
+					}
+				}
+
+				if configMapExistsAndIsAwsOne {
+					err = ImportConfigMapAccountIntoHelm(ctx, clientSet, "kube-system", "coredns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error importing CoreDns config map to Helm",
+							fmt.Sprintf("Error importing CoreDns config map to Helm: %s", err),
+						)
+						return
+					}
+				}
+
+				if podDisruptionBudgetExistsAndIsAwsOne {
+					err = ImportPodDisruptionBudgetIntoHelm(ctx, clientSet, "kube-system", "coredns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error importing CoreDns pod disruption budget to Helm",
+							fmt.Sprintf("Error importing CoreDns pod disruption budget to Helm: %s", err),
+						)
+						return
+					}
+				}
 			}
 		}
 	}
@@ -875,7 +888,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	}
 
 	removeCoreDns := true
-	clusterIps := []string{}
+	var clusterIps []string
 	if !(model.RemoveCoreDns.IsNull() || model.RemoveCoreDns.IsUnknown()) {
 		removeCoreDns = model.RemoveCoreDns.ValueBool()
 	}
@@ -931,7 +944,8 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 	}
 	model.AwsCoreDnsDeploymentExists = basetypes.NewBoolValue(awsCoreDnsAwsDeploymentExists)
 
-	awsCoreDnsServiceExists, _, err := ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
+	awsCoreDnsServiceExists := false
+	awsCoreDnsServiceExists, clusterIps, err = ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
 	if err != nil {
 		res.Diagnostics.AddError(
 			"Error checking for CoreDNS service",
@@ -1152,7 +1166,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 	}
 
 	removeCoreDns := true
-	clusterIps := []string{}
+	var clusterIps []string
 	if !(model.RemoveCoreDns.IsNull() || model.RemoveCoreDns.IsUnknown()) {
 		removeCoreDns = model.RemoveCoreDns.ValueBool()
 	}
@@ -1170,7 +1184,17 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
-	if removeAwsCni || removeKubeProxy || importCorednsToHelm {
+	serviceExistsAndIsAwsOne := false
+	serviceExistsAndIsAwsOne, clusterIps, err = ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
+	if err != nil {
+		res.Diagnostics.AddError(
+			"Error checking CoreDNS service is AWS one",
+			fmt.Sprintf("Error checking CoreDNS service is AWS one: %s", err),
+		)
+		return
+	}
+
+	if removeAwsCni || removeKubeProxy || removeCoreDns || importCorednsToHelm {
 		if removeAwsCni {
 			_, err = DeleteDaemonset(ctx, clientSet, "kube-system", "aws-node")
 			if err != nil {
@@ -1202,7 +1226,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 			}
 		}
 
-		if removeCoreDns {
+		if removeCoreDns || importCorednsToHelm {
 			// We only want to delete the Amazon CoreDNS and not any further deployed versions
 			deploymentExistsAndIsAwsOne := false
 			deploymentExistsAndIsAwsOne, err = DeploymentExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
@@ -1212,38 +1236,6 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 					fmt.Sprintf("Error checking CoreDNS deployment is AWS one: %s", err),
 				)
 				return
-			}
-
-			if deploymentExistsAndIsAwsOne {
-				_, err = DeleteDeployment(ctx, clientSet, "kube-system", "coredns")
-				if err != nil {
-					res.Diagnostics.AddError(
-						"Error removing CoreDNS deployment",
-						fmt.Sprintf("Error removing CoreDNS deployment: %s", err),
-					)
-					return
-				}
-			}
-
-			serviceExistsAndIsAwsOne := false
-			serviceExistsAndIsAwsOne, _, err = ServiceExistsAndIsAwsOne(ctx, clientSet, "kube-system", "kube-dns")
-			if err != nil {
-				res.Diagnostics.AddError(
-					"Error checking CoreDNS service is AWS one",
-					fmt.Sprintf("Error checking CoreDNS service is AWS one: %s", err),
-				)
-				return
-			}
-
-			if serviceExistsAndIsAwsOne {
-				_, err = DeleteService(ctx, clientSet, "kube-system", "kube-dns")
-				if err != nil {
-					res.Diagnostics.AddError(
-						"Error removing CoreDNS service",
-						fmt.Sprintf("Error removing CoreDNS service: %s", err),
-					)
-					return
-				}
 			}
 
 			serviceAccountExistsAndIsAwsOne := false
@@ -1256,17 +1248,6 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 				return
 			}
 
-			if serviceAccountExistsAndIsAwsOne {
-				_, err = DeleteServiceAccount(ctx, clientSet, "kube-system", "coredns")
-				if err != nil {
-					res.Diagnostics.AddError(
-						"Error removing CoreDNS service account",
-						fmt.Sprintf("Error removing CoreDNS service account: %s", err),
-					)
-					return
-				}
-			}
-
 			configMapExistsAndIsAwsOne := false
 			configMapExistsAndIsAwsOne, err = ConfigMapExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
 			if err != nil {
@@ -1275,17 +1256,6 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 					fmt.Sprintf("Error checking CoreDNS config map is AWS one: %s", err),
 				)
 				return
-			}
-
-			if configMapExistsAndIsAwsOne {
-				_, err = DeleteConfigMap(ctx, clientSet, "kube-system", "coredns")
-				if err != nil {
-					res.Diagnostics.AddError(
-						"Error removing CoreDNS configmap",
-						fmt.Sprintf("Error removing CoreDNS configmap: %s", err),
-					)
-					return
-				}
 			}
 
 			podDisruptionBudgetExistsAndIsAwsOne := false
@@ -1298,62 +1268,116 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 				return
 			}
 
-			if podDisruptionBudgetExistsAndIsAwsOne {
-				_, err = DeletePodDisruptionBudget(ctx, clientSet, "kube-system", "coredns")
-				if err != nil {
-					res.Diagnostics.AddError(
-						"Error removing CoreDNS pod disruption budget",
-						fmt.Sprintf("Error removing CoreDNS pod disruption budget: %s", err),
-					)
-					return
+			if removeCoreDns {
+				if deploymentExistsAndIsAwsOne {
+					_, err = DeleteDeployment(ctx, clientSet, "kube-system", "coredns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error removing CoreDNS deployment",
+							fmt.Sprintf("Error removing CoreDNS deployment: %s", err),
+						)
+						return
+					}
 				}
-			}
-		}
 
-		if !removeCoreDns && importCorednsToHelm {
-			err = ImportDeploymentIntoHelm(ctx, clientSet, "kube-system", "coredns")
-			if err != nil {
-				res.Diagnostics.AddError(
-					"Error importing CoreDns deployment to Helm",
-					fmt.Sprintf("Error importing CoreDns deployment to Helm: %s", err),
-				)
-				return
-			}
+				if serviceExistsAndIsAwsOne {
+					_, err = DeleteService(ctx, clientSet, "kube-system", "kube-dns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error removing CoreDNS service",
+							fmt.Sprintf("Error removing CoreDNS service: %s", err),
+						)
+						return
+					}
+				}
 
-			err = ImportServiceIntoHelm(ctx, clientSet, "kube-system", "kube-dns")
-			if err != nil {
-				res.Diagnostics.AddError(
-					"Error importing CoreDns service to Helm",
-					fmt.Sprintf("Error importing CoreDns service to Helm: %s", err),
-				)
-				return
-			}
+				if serviceAccountExistsAndIsAwsOne {
+					_, err = DeleteServiceAccount(ctx, clientSet, "kube-system", "coredns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error removing CoreDNS service account",
+							fmt.Sprintf("Error removing CoreDNS service account: %s", err),
+						)
+						return
+					}
+				}
 
-			err = ImportServiceAccountIntoHelm(ctx, clientSet, "kube-system", "coredns")
-			if err != nil {
-				res.Diagnostics.AddError(
-					"Error importing CoreDns service account to Helm",
-					fmt.Sprintf("Error importing CoreDns service account to Helm: %s", err),
-				)
-				return
-			}
+				if configMapExistsAndIsAwsOne {
+					_, err = DeleteConfigMap(ctx, clientSet, "kube-system", "coredns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error removing CoreDNS configmap",
+							fmt.Sprintf("Error removing CoreDNS configmap: %s", err),
+						)
+						return
+					}
+				}
 
-			err = ImportConfigMapAccountIntoHelm(ctx, clientSet, "kube-system", "coredns")
-			if err != nil {
-				res.Diagnostics.AddError(
-					"Error importing CoreDns config map to Helm",
-					fmt.Sprintf("Error importing CoreDns config map to Helm: %s", err),
-				)
-				return
-			}
+				if podDisruptionBudgetExistsAndIsAwsOne {
+					_, err = DeletePodDisruptionBudget(ctx, clientSet, "kube-system", "coredns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error removing CoreDNS pod disruption budget",
+							fmt.Sprintf("Error removing CoreDNS pod disruption budget: %s", err),
+						)
+						return
+					}
+				}
+			} else if importCorednsToHelm {
+				if deploymentExistsAndIsAwsOne {
+					err = ImportDeploymentIntoHelm(ctx, clientSet, "kube-system", "coredns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error importing CoreDns deployment to Helm",
+							fmt.Sprintf("Error importing CoreDns deployment to Helm: %s", err),
+						)
+						return
+					}
+				}
 
-			err = ImportPodDisruptionBudgetIntoHelm(ctx, clientSet, "kube-system", "coredns")
-			if err != nil {
-				res.Diagnostics.AddError(
-					"Error importing CoreDns pod disruption budget to Helm",
-					fmt.Sprintf("Error importing CoreDns pod disruption budget to Helm: %s", err),
-				)
-				return
+				if serviceExistsAndIsAwsOne {
+					err = ImportServiceIntoHelm(ctx, clientSet, "kube-system", "kube-dns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error importing CoreDns service to Helm",
+							fmt.Sprintf("Error importing CoreDns service to Helm: %s", err),
+						)
+						return
+					}
+				}
+
+				if serviceAccountExistsAndIsAwsOne {
+					err = ImportServiceAccountIntoHelm(ctx, clientSet, "kube-system", "coredns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error importing CoreDns service account to Helm",
+							fmt.Sprintf("Error importing CoreDns service account to Helm: %s", err),
+						)
+						return
+					}
+				}
+
+				if configMapExistsAndIsAwsOne {
+					err = ImportConfigMapAccountIntoHelm(ctx, clientSet, "kube-system", "coredns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error importing CoreDns config map to Helm",
+							fmt.Sprintf("Error importing CoreDns config map to Helm: %s", err),
+						)
+						return
+					}
+				}
+
+				if podDisruptionBudgetExistsAndIsAwsOne {
+					err = ImportPodDisruptionBudgetIntoHelm(ctx, clientSet, "kube-system", "coredns")
+					if err != nil {
+						res.Diagnostics.AddError(
+							"Error importing CoreDns pod disruption budget to Helm",
+							fmt.Sprintf("Error importing CoreDns pod disruption budget to Helm: %s", err),
+						)
+						return
+					}
+				}
 			}
 		}
 	}
