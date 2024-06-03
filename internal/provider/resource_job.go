@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -428,6 +429,34 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 			fmt.Sprintf("Error checking CoreDNS service is AWS one: %s", err),
 		)
 		return
+	}
+
+	if len(clusterIps) > 0 {
+		_, clusterIps, err = ServiceExistsAndIsAwsOne(ctx, clientSet, "default", "kubernetes")
+		if err != nil {
+			res.Diagnostics.AddError(
+				"Error checking Kubernetes service is AWS one",
+				fmt.Sprintf("Error checking Kubernetes service is AWS one: %s", err),
+			)
+			return
+		}
+		if len(clusterIps) > 0 {
+			if strings.Contains(strings.ToLower(clusterIps[0]), ":") {
+				ipv6Parts := strings.Split(clusterIps[0], ":")
+				ipv6Parts = ipv6Parts[:len(ipv6Parts)-1]
+				ipv6 := strings.Join(ipv6Parts, ":") + ":a"
+				clusterIps = []string{ipv6}
+			}
+		}
+
+		if len(clusterIps) > 0 {
+			if strings.Contains(strings.ToLower(clusterIps[0]), ".") {
+				ipv6Parts := strings.Split(clusterIps[0], ".")
+				ipv6Parts = ipv6Parts[:len(ipv6Parts)-1]
+				ipv6 := strings.Join(ipv6Parts, ".") + ".10"
+				clusterIps = []string{ipv6}
+			}
+		}
 	}
 
 	if removeAwsCni || removeKubeProxy || removeCoreDns || importCorednsToHelm {
