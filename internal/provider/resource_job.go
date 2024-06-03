@@ -439,16 +439,23 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 				fmt.Sprintf("Error checking Kubernetes service is AWS one: %s", err),
 			)
 			return
-		} else if len(clusterIps) > 0 && strings.Contains(strings.ToLower(clusterIps[0]), ":") {
-			ipv6Parts := strings.Split(clusterIps[0], ":")
-			ipv6Parts = ipv6Parts[:len(ipv6Parts)-1]
-			ipv6 := strings.Join(ipv6Parts, ":") + ":a"
-			clusterIps = []string{ipv6}
-		} else if len(clusterIps) > 0 && strings.Contains(strings.ToLower(clusterIps[0]), ".") {
-			ipv6Parts := strings.Split(clusterIps[0], ".")
-			ipv6Parts = ipv6Parts[:len(ipv6Parts)-1]
-			ipv6 := strings.Join(ipv6Parts, ".") + ".10"
-			clusterIps = []string{ipv6}
+		}
+		if len(clusterIps) > 0 {
+			if strings.Contains(strings.ToLower(clusterIps[0]), ":") {
+				ipv6Parts := strings.Split(clusterIps[0], ":")
+				ipv6Parts = ipv6Parts[:len(ipv6Parts)-1]
+				ipv6 := strings.Join(ipv6Parts, ":") + ":a"
+				clusterIps = []string{ipv6}
+			}
+		}
+
+		if len(clusterIps) > 0 {
+			if strings.Contains(strings.ToLower(clusterIps[0]), ".") {
+				ipv6Parts := strings.Split(clusterIps[0], ".")
+				ipv6Parts = ipv6Parts[:len(ipv6Parts)-1]
+				ipv6 := strings.Join(ipv6Parts, ".") + ".10"
+				clusterIps = []string{ipv6}
+			}
 		}
 	}
 
