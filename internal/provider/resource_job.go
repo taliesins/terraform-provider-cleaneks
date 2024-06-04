@@ -431,7 +431,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	if len(clusterIps) > 0 {
+	if len(clusterIps) > 0 && (model.AwsCoreDnsServiceClusterIps.IsUnknown() || model.AwsCoreDnsServiceClusterIps.IsNull()) {
 		_, clusterIps, err = ServiceExistsAndIsAwsOne(ctx, clientSet, "default", "kubernetes")
 		if err != nil {
 			res.Diagnostics.AddError(
@@ -813,6 +813,11 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		listValue, _ := types.ListValue(types.StringType, elements)
 		model.AwsCoreDnsServiceClusterIps = listValue
 	}
+	if model.AwsCoreDnsServiceClusterIps.IsUnknown() || model.AwsCoreDnsServiceClusterIps.IsNull() {
+		elements := []attr.Value{}
+		listValue, _ := types.ListValue(types.StringType, elements)
+		model.AwsCoreDnsServiceClusterIps = listValue
+	}
 	model.ID = basetypes.NewStringValue(r.provider.model.Host.ValueString())
 
 	// Finally, set the state
@@ -1002,6 +1007,34 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 		)
 		return
 	}
+	if len(clusterIps) > 0 && (model.AwsCoreDnsServiceClusterIps.IsUnknown() || model.AwsCoreDnsServiceClusterIps.IsNull()) {
+		_, clusterIps, err = ServiceExistsAndIsAwsOne(ctx, clientSet, "default", "kubernetes")
+		if err != nil {
+			res.Diagnostics.AddError(
+				"Error checking Kubernetes service is AWS one",
+				fmt.Sprintf("Error checking Kubernetes service is AWS one: %s", err),
+			)
+			return
+		}
+		if len(clusterIps) > 0 {
+			if strings.Contains(strings.ToLower(clusterIps[0]), ":") {
+				ipv6Parts := strings.Split(clusterIps[0], ":")
+				ipv6Parts = ipv6Parts[:len(ipv6Parts)-1]
+				ipv6 := strings.Join(ipv6Parts, ":") + ":a"
+				clusterIps = []string{ipv6}
+			}
+		}
+
+		if len(clusterIps) > 0 {
+			if strings.Contains(strings.ToLower(clusterIps[0]), ".") {
+				ipv6Parts := strings.Split(clusterIps[0], ".")
+				ipv6Parts = ipv6Parts[:len(ipv6Parts)-1]
+				ipv6 := strings.Join(ipv6Parts, ".") + ".10"
+				clusterIps = []string{ipv6}
+			}
+		}
+	}
+
 	model.AwsCoreDnsConfigMapExists = basetypes.NewBoolValue(awsCoreDnsConfigMapExists)
 
 	awsCoreDnsPodDisruptionBudgetExists, err := PodDisruptionBudgetExistsAndIsAwsOne(ctx, clientSet, "kube-system", "coredns")
@@ -1092,6 +1125,11 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 		for _, clusterIp := range clusterIps {
 			elements = append(elements, types.StringValue(clusterIp))
 		}
+		listValue, _ := types.ListValue(types.StringType, elements)
+		model.AwsCoreDnsServiceClusterIps = listValue
+	}
+	if model.AwsCoreDnsServiceClusterIps.IsUnknown() || model.AwsCoreDnsServiceClusterIps.IsNull() {
+		elements := []attr.Value{}
 		listValue, _ := types.ListValue(types.StringType, elements)
 		model.AwsCoreDnsServiceClusterIps = listValue
 	}
@@ -1221,6 +1259,34 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 			fmt.Sprintf("Error checking CoreDNS service is AWS one: %s", err),
 		)
 		return
+	}
+
+	if len(clusterIps) > 0 && (model.AwsCoreDnsServiceClusterIps.IsUnknown() || model.AwsCoreDnsServiceClusterIps.IsNull()) {
+		_, clusterIps, err = ServiceExistsAndIsAwsOne(ctx, clientSet, "default", "kubernetes")
+		if err != nil {
+			res.Diagnostics.AddError(
+				"Error checking Kubernetes service is AWS one",
+				fmt.Sprintf("Error checking Kubernetes service is AWS one: %s", err),
+			)
+			return
+		}
+		if len(clusterIps) > 0 {
+			if strings.Contains(strings.ToLower(clusterIps[0]), ":") {
+				ipv6Parts := strings.Split(clusterIps[0], ":")
+				ipv6Parts = ipv6Parts[:len(ipv6Parts)-1]
+				ipv6 := strings.Join(ipv6Parts, ":") + ":a"
+				clusterIps = []string{ipv6}
+			}
+		}
+
+		if len(clusterIps) > 0 {
+			if strings.Contains(strings.ToLower(clusterIps[0]), ".") {
+				ipv6Parts := strings.Split(clusterIps[0], ".")
+				ipv6Parts = ipv6Parts[:len(ipv6Parts)-1]
+				ipv6 := strings.Join(ipv6Parts, ".") + ".10"
+				clusterIps = []string{ipv6}
+			}
+		}
 	}
 
 	if removeAwsCni || removeKubeProxy || removeCoreDns || importCorednsToHelm {
@@ -1575,6 +1641,11 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		for _, clusterIp := range clusterIps {
 			elements = append(elements, types.StringValue(clusterIp))
 		}
+		listValue, _ := types.ListValue(types.StringType, elements)
+		model.AwsCoreDnsServiceClusterIps = listValue
+	}
+	if model.AwsCoreDnsServiceClusterIps.IsUnknown() || model.AwsCoreDnsServiceClusterIps.IsNull() {
+		elements := []attr.Value{}
 		listValue, _ := types.ListValue(types.StringType, elements)
 		model.AwsCoreDnsServiceClusterIps = listValue
 	}
