@@ -1,4 +1,10 @@
 
+<a name="v0.1.40"></a>
+## [v0.1.40](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.39...v0.1.40) (2024-06-04)
+
+### Fix
+- [05a8f04](https://github.com/taliesins/terraform-provider-cleaneks/commit/05a8f047d3b10bfb39133f90d94441ab74e23f37) Provide a value if its unknown for clusterips
+
 <a name="v0.1.39"></a>
 ## [v0.1.39](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.38...v0.1.39) (2024-06-03)
 
