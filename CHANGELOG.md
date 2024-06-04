@@ -1,4 +1,10 @@
 
+<a name="v0.1.41"></a>
+## [v0.1.41](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.40...v0.1.41) (2024-06-04)
+
+### Fix
+- [64b297b](https://github.com/taliesins/terraform-provider-cleaneks/commit/64b297bdd0b8629e3e542d8e448e47989a838708) Run check if no values are returned
+
 <a name="v0.1.40"></a>
 ## [v0.1.40](https://github.com/taliesins/terraform-provider-cleaneks/compare/v0.1.39...v0.1.40) (2024-06-04)
 
