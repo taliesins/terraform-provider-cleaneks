@@ -431,7 +431,7 @@ func (r *JobResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	if len(clusterIps) > 0 && (model.AwsCoreDnsServiceClusterIps.IsUnknown() || model.AwsCoreDnsServiceClusterIps.IsNull()) {
+	if len(clusterIps) < 1 && (model.AwsCoreDnsServiceClusterIps.IsUnknown() || model.AwsCoreDnsServiceClusterIps.IsNull()) {
 		_, clusterIps, err = ServiceExistsAndIsAwsOne(ctx, clientSet, "default", "kubernetes")
 		if err != nil {
 			res.Diagnostics.AddError(
@@ -1007,7 +1007,7 @@ func (r *JobResource) Read(ctx context.Context, req resource.ReadRequest, res *r
 		)
 		return
 	}
-	if len(clusterIps) > 0 && (model.AwsCoreDnsServiceClusterIps.IsUnknown() || model.AwsCoreDnsServiceClusterIps.IsNull()) {
+	if len(clusterIps) < 1 && (model.AwsCoreDnsServiceClusterIps.IsUnknown() || model.AwsCoreDnsServiceClusterIps.IsNull()) {
 		_, clusterIps, err = ServiceExistsAndIsAwsOne(ctx, clientSet, "default", "kubernetes")
 		if err != nil {
 			res.Diagnostics.AddError(
@@ -1261,7 +1261,7 @@ func (r *JobResource) Update(ctx context.Context, req resource.UpdateRequest, re
 		return
 	}
 
-	if len(clusterIps) > 0 && (model.AwsCoreDnsServiceClusterIps.IsUnknown() || model.AwsCoreDnsServiceClusterIps.IsNull()) {
+	if len(clusterIps) < 1 && (model.AwsCoreDnsServiceClusterIps.IsUnknown() || model.AwsCoreDnsServiceClusterIps.IsNull()) {
 		_, clusterIps, err = ServiceExistsAndIsAwsOne(ctx, clientSet, "default", "kubernetes")
 		if err != nil {
 			res.Diagnostics.AddError(
